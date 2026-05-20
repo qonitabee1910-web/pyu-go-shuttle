@@ -11,7 +11,7 @@ import {
 } from "@/features/admin/store/admin";
 import type { VehicleTemplate, SeatMarker } from "@/features/admin/store/admin";
 import { formatRupiah } from "@/shared/utils/utils";
-import type { VehicleType, VehicleTier } from "@/shared/types/mock-data";
+import type { VehicleType, VehicleTier } from "@/shared/types/shuttle";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";

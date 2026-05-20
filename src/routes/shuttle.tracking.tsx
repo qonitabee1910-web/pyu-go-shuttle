@@ -7,7 +7,7 @@ import { PageHeader } from "@/shared/components/PageHeader";
 import { MapView } from "@/shared/components/MapView";
 
 import { useBooking } from "@/features/booking/store/booking";
-import { KNO_AIRPORT } from "@/shared/types/mock-data";
+import { KNO_AIRPORT } from "@/shared/types/shuttle";
 import { useOsrmRoute } from "@/shared/hooks/use-osrm-route";
 import { useVehicleTracking } from "@/features/ride/hooks/use-vehicle-tracking";
 

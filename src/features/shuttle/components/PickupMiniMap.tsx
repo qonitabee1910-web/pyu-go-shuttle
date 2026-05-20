@@ -1,5 +1,5 @@
 import { MapView } from "@/shared/components/MapView";
-import { KNO_AIRPORT } from "@/shared/types/mock-data";
+import { KNO_AIRPORT } from "@/shared/types/shuttle";
 
 export function PickupMiniMap({
   lat,

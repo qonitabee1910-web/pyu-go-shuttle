@@ -24,23 +24,40 @@ export const createBooking = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Fetch price + check seat availability
-    const [{ data: schedule, error: sErr }, { data: seats, error: seatErr }] =
-      await Promise.all([
-        supabase.from("schedules").select("id, price").eq("id", data.scheduleId).single(),
-        supabase.from("seats").select("id, status").in("id", data.seatIds),
-      ]);
+    // 1. Fetch schedule info
+    const { data: schedule, error: sErr } = await supabase
+      .from("schedules")
+      .select("id, price")
+      .eq("id", data.scheduleId)
+      .single();
     if (sErr) throw sErr;
+
+    // 2. Try to hold seats atomically
+    const now = new Date();
+    const holdUntil = new Date(now.getTime() + 10 * 60_000).toISOString();
+    
+    // Attempt to update seats that are either 'available' or have an expired hold
+    const { data: updatedSeats, error: seatErr } = await (supabase as any)
+      .from("seats")
+      .update({ 
+        status: "held", 
+        hold_until: holdUntil, 
+        updated_at: now.toISOString() 
+      })
+      .in("id", data.seatIds)
+      .eq("schedule_id", data.scheduleId)
+      .or(`status.eq.available,and(status.eq.held,hold_until.lt.${now.toISOString()})`)
+      .select();
+
     if (seatErr) throw seatErr;
-    if (!seats || seats.length !== data.seatIds.length) {
-      throw new Error("Sebagian kursi tidak ditemukan");
+    if (!updatedSeats || updatedSeats.length !== data.seatIds.length) {
+      throw new Error("Sebagian kursi sudah tidak tersedia. Silakan pilih kursi lain.");
     }
-    const taken = seats.find((s) => s.status !== "available");
-    if (taken) throw new Error("Kursi sudah dipesan, silakan pilih kursi lain");
 
     const total = schedule.price * data.seatIds.length;
     const code = genCode();
 
+    // 3. Create the booking
     const { data: booking, error: bErr } = await supabase
       .from("bookings")
       .insert({
@@ -54,8 +71,17 @@ export const createBooking = createServerFn({ method: "POST" })
       })
       .select()
       .single();
-    if (bErr) throw bErr;
 
+    if (bErr) {
+      // Rollback: Release seats if booking creation fails
+      await (supabase as any)
+        .from("seats")
+        .update({ status: "available", hold_until: null })
+        .in("id", data.seatIds);
+      throw bErr;
+    }
+
+    // 4. Link seats to booking
     const { error: linkErr } = await supabase.from("seat_bookings").insert(
       data.seatIds.map((sid) => ({
         booking_id: booking.id,
@@ -63,13 +89,11 @@ export const createBooking = createServerFn({ method: "POST" })
         passenger_name: data.passengerName,
       })),
     );
-    if (linkErr) throw linkErr;
 
-    // Hold seats
-    await supabase
-      .from("seats")
-      .update({ status: "held", hold_until: new Date(Date.now() + 10 * 60_000).toISOString() })
-      .in("id", data.seatIds);
+    if (linkErr) {
+      // Note: In a real app, we might want more complex cleanup here
+      throw linkErr;
+    }
 
     return { bookingId: booking.id, code, total };
   });

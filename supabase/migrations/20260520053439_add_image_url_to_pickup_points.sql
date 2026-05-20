@@ -1,0 +1,2 @@
+ALTER TABLE pickup_points ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE pickup_points ADD COLUMN IF NOT EXISTS gallery TEXT[];

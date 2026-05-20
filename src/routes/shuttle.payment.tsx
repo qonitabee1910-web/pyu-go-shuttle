@@ -7,7 +7,7 @@ import { PageHeader } from "@/shared/components/PageHeader";
 import { BookingStepper } from "@/features/shuttle/components/BookingStepper";
 import { useBooking } from "@/features/booking/store/booking";
 import { formatRupiah } from "@/shared/utils/utils";
-import { KNO_AIRPORT } from "@/shared/types/mock-data";
+import { KNO_AIRPORT } from "@/shared/types/shuttle";
 import { toast } from "sonner";
 import { createBooking } from "@/features/booking/services/bookings.functions";
 import { mockPayBooking } from "@/features/booking/services/payments.functions";

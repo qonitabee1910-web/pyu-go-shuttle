@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useAdmin } from "@/features/admin/store/admin";
-import type { PickupPoint } from "@/shared/types/mock-data";
+import type { PickupPoint } from "@/shared/types/shuttle";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Card, CardContent } from "@/shared/components/ui/card";

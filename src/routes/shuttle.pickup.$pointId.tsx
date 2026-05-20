@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate, notFound } from "@tanstack/react-router";
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 import {
   ArrowLeft,
   Clock,
@@ -10,12 +11,17 @@ import {
   Ruler,
   ExternalLink,
   Info,
+  Image as ImageIcon,
 } from "lucide-react";
 import { MapView } from "@/shared/components/MapView";
 import { BookingStepper } from "@/features/shuttle/components/BookingStepper";
-import { KNO_AIRPORT, pickupPoints } from "@/shared/types/mock-data";
+import { KNO_AIRPORT } from "@/shared/types/shuttle";
 import { useBooking } from "@/features/booking/store/booking";
 import { useOsrmRoute } from "@/shared/hooks/use-osrm-route";
+import { useServerFn } from "@tanstack/react-start";
+import { getPickupPoint } from "@/features/shuttle/services/shuttle.functions";
+import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 export const Route = createFileRoute("/shuttle/pickup/$pointId")({
   head: () => ({ meta: [{ title: "Rute ke KNO — PYU-GO" }] }),
@@ -50,14 +56,54 @@ function PickupRoutePreview() {
   const { pointId } = Route.useParams();
   const nav = useNavigate();
   const setPickup = useBooking((s) => s.setPickup);
-  const point = pickupPoints.find((p) => p.id === pointId);
+  
+  const fetchPoint = useServerFn(getPickupPoint);
+  const { data: rawPoint, isLoading: pointLoading } = useQuery({
+    queryKey: ["pickup-point", pointId],
+    queryFn: () => fetchPoint({ data: { id: pointId } }),
+  });
 
-  if (!point) throw notFound();
+  const point = useMemo(() => {
+    if (!rawPoint) return null;
+    return {
+      id: rawPoint.id,
+      name: rawPoint.name,
+      address: rawPoint.address ?? "",
+      lat: Number(rawPoint.lat),
+      lng: Number(rawPoint.lng),
+      rayon: rawPoint.rayon ?? "Rayon A",
+      distanceKm: Number(rawPoint.distance_km ?? 0),
+      etaMin: Number(rawPoint.eta_min ?? 0),
+      imageUrl: rawPoint.image_url,
+      gallery: rawPoint.gallery,
+    };
+  }, [rawPoint]);
 
   const { data: osrm, isLoading: osrmLoading } = useOsrmRoute(
-    { lat: point.lat, lng: point.lng },
+    point ? { lat: point.lat, lng: point.lng } : null,
     { lat: KNO_AIRPORT.lat, lng: KNO_AIRPORT.lng },
   );
+
+  if (pointLoading) {
+    return (
+      <div className="min-h-screen bg-secondary/40 pb-28">
+        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-card/95 px-4 py-3 backdrop-blur">
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-48" />
+          </div>
+        </div>
+        <div className="p-4 space-y-4">
+          <Skeleton className="h-56 w-full rounded-3xl" />
+          <Skeleton className="h-32 w-full rounded-3xl" />
+          <Skeleton className="h-48 w-full rounded-3xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!point) throw notFound();
 
   const distanceKm = osrm ? Number(osrm.distanceKm.toFixed(1)) : point.distanceKm;
   const estimasiMnt = osrm ? Math.round(osrm.durationMin) : Math.round(point.distanceKm * 2.5 + 30);
@@ -90,18 +136,35 @@ function PickupRoutePreview() {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div className="min-w-0">
-          <div className="truncate text-sm font-bold">Rute ke KNO</div>
-          <div className="truncate text-[11px] text-muted-foreground">{point.name}</div>
+          <div className="truncate text-sm font-bold tracking-tight">Rute ke KNO</div>
+          <div className="truncate text-[11px] font-medium text-muted-foreground">{point.name}</div>
         </div>
       </div>
       <BookingStepper />
 
-      <div className="mx-auto max-w-md space-y-3 p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="overflow-hidden rounded-2xl shadow-soft"
-        >
+      <div className="mx-auto max-w-md space-y-4 p-4">
+        {point.imageUrl && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative aspect-video w-full overflow-hidden rounded-[2rem] shadow-soft"
+          >
+            <img 
+              src={point.imageUrl} 
+              alt={point.name} 
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <div className="absolute bottom-4 left-6 text-white">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest opacity-80">
+                <ImageIcon className="h-3 w-3" /> Area Penjemputan
+              </div>
+              <div className="mt-1 text-lg font-bold">{point.name}</div>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="relative overflow-hidden rounded-[2rem] bg-card shadow-soft">
           <MapView
             center={center}
             zoom={11}
@@ -115,9 +178,34 @@ function PickupRoutePreview() {
             planePos={[KNO_AIRPORT.lat, KNO_AIRPORT.lng]}
             vehicleEmoji="✈️"
           />
-        </motion.div>
+          <div className="absolute bottom-4 left-4 right-4 flex justify-between gap-2">
+             <div className="flex items-center gap-2 rounded-2xl bg-white/95 px-3 py-2 text-[10px] font-bold text-foreground shadow-card backdrop-blur">
+                <div className="h-2 w-2 rounded-full bg-primary" /> {point.name}
+             </div>
+             <a href={gmapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-2xl bg-primary px-3 py-2 text-[10px] font-bold text-primary-foreground shadow-card">
+                <ExternalLink className="h-3 w-3" /> GMAPS
+             </a>
+          </div>
+        </div>
 
-        <div className="rounded-2xl bg-card p-4 shadow-soft">
+        {point.gallery && point.gallery.length > 0 && (
+          <div className="space-y-3">
+            <div className="px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Galeri Lokasi</div>
+            <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+              {point.gallery.map((img: string, idx: number) => (
+                <div key={idx} className="h-20 w-32 shrink-0 overflow-hidden rounded-2xl shadow-soft">
+                  <img src={img} alt="" className="h-full w-full object-cover" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="overflow-hidden rounded-[2rem] bg-card p-4 shadow-card"
+        >
           <div className="flex items-start gap-3">
             <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary">
               <MapPin className="h-4 w-4" />
@@ -151,7 +239,7 @@ function PickupRoutePreview() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-2 gap-2">
           <Metric
@@ -226,7 +314,7 @@ function PickupRoutePreview() {
           <button
             onClick={() => {
               setPickup(point);
-              nav({ to: "/shuttle/service" });
+              nav({ to: "/shuttle/schedule" });
             }}
             className="flex-[1.4] rounded-full bg-primary py-3 text-xs font-bold text-primary-foreground shadow-card"
           >

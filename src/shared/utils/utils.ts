@@ -19,3 +19,22 @@ export function formatDateTime(iso: string) {
     timeZone: "Asia/Jakarta",
   });
 }
+
+/**
+ * Returns a Date object adjusted to Asia/Jakarta timezone for comparison
+ */
+export function getJakartaNow() {
+  const now = new Date();
+  return new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+}
+
+export function formatJakartaDate(date: Date) {
+  return date.toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Jakarta",
+  });
+}
+

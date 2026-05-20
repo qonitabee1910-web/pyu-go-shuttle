@@ -6,11 +6,12 @@ import { MapPin, Search, Clock, Navigation, Ruler, ChevronRight, Loader2 } from 
 import { PageHeader } from "@/shared/components/PageHeader";
 import { BookingStepper } from "@/features/shuttle/components/BookingStepper";
 import { MapView } from "@/shared/components/MapView";
-import { KNO_AIRPORT, type PickupPoint } from "@/shared/types/mock-data";
+import { KNO_AIRPORT, type PickupPoint } from "@/shared/types/shuttle";
 import { useBooking } from "@/features/booking/store/booking";
 import { useOsrmRoute } from "@/shared/hooks/use-osrm-route";
 import { useServerFn } from "@tanstack/react-start";
 import { listPickupPoints } from "@/features/shuttle/services/shuttle.functions";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 export const Route = createFileRoute("/shuttle/pickup")({
   head: () => ({ meta: [{ title: "Pilih Titik Jemput — PYU-GO" }] }),
@@ -85,75 +86,134 @@ function PickupPage() {
       <PageHeader title="Pilih Titik Jemput" subtitle={`Tujuan: ${KNO_AIRPORT.name}`} />
       <BookingStepper />
 
-      <div className="mx-auto max-w-md space-y-3 p-4">
-        <div className="relative">
-          <MapView
-            key={`${selectedId ?? "all"}-${rayon}-${filtered.length}`}
-            center={mapCenter}
-            zoom={mapZoom}
-            className="h-56 w-full"
-            points={mapPoints}
-            airportIndex={airportIdx}
-            highlightIndex={highlightIdx}
-            route={routePath}
-            onPointClick={(i) => { if (i < filtered.length) setSelectedId(filtered[i].id); }}
-          />
-          <div className="pointer-events-none absolute left-3 top-3 rounded-full bg-card/95 px-2.5 py-1 text-[10px] font-bold shadow-soft backdrop-blur">
-            {selected ? "Rute ke KNO" : `${filtered.length} titik jemput`}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 rounded-2xl bg-card px-4 py-3 shadow-soft">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari titik jemput..." className="w-full bg-transparent text-sm outline-none" />
-        </div>
-
-        <div className="no-scrollbar flex gap-2 overflow-x-auto">
-          {rayons.map((r) => (
-            <button key={r} onClick={() => setRayon(r)} className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${rayon === r ? "bg-primary text-primary-foreground shadow-card" : "bg-card text-muted-foreground border border-border"}`}>
-              {r}
-            </button>
-          ))}
-        </div>
-
-        {isLoading && (
-          <div className="flex items-center justify-center rounded-2xl bg-card p-6 text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memuat titik jemput...
-          </div>
-        )}
-
-        <div className="space-y-2 pt-1">
-          {filtered.map((p, i) => {
-            const estimasi = Math.round(p.distanceKm * 2.5 + 30);
-            const active = selectedId === p.id;
-            return (
-              <motion.button key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }} onClick={() => setSelectedId(active ? null : p.id)} className={`block w-full overflow-hidden rounded-2xl bg-card p-4 text-left shadow-soft transition ${active ? "ring-2 ring-primary" : ""}`}>
-                <div className="flex items-start gap-3">
-                  <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${active ? "bg-primary text-primary-foreground" : "bg-primary-soft text-primary"}`}>
-                    <MapPin className="h-4 w-4" />
+      <div className="mx-auto max-w-md space-y-4 p-4">
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-56 w-full rounded-3xl" />
+            <div className="flex gap-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-16 rounded-full" />
+              ))}
+            </div>
+            <Skeleton className="h-12 w-full rounded-2xl" />
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+                  <Skeleton className="h-10 w-10 rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-48" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-foreground">{p.rayon}</span>
-                      <span className="text-[11px] text-muted-foreground">{p.city}</span>
-                    </div>
-                    <div className="mt-1 text-sm font-bold">{p.name}</div>
-                    <div className="truncate text-xs text-muted-foreground">{p.address}</div>
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
-                      <Stat icon={<Ruler className="h-3 w-3" />} label="Jarak" value={`${p.distanceKm} km`} />
-                      <Stat icon={<Clock className="h-3 w-3" />} label="ETA jemput" value={`${p.etaMin} mnt`} />
-                      <Stat icon={<Navigation className="h-3 w-3" />} label="ke KNO" value={`~${estimasi} mnt`} />
-                    </div>
-                  </div>
-                  <ChevronRight className={`h-4 w-4 shrink-0 text-muted-foreground transition ${active ? "rotate-90 text-primary" : ""}`} />
                 </div>
-              </motion.button>
-            );
-          })}
-          {!isLoading && filtered.length === 0 && (
-            <div className="rounded-2xl bg-card p-8 text-center text-sm text-muted-foreground">Tidak ada titik jemput sesuai pencarian</div>
-          )}
-        </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="relative">
+              <MapView
+                key={`${selectedId ?? "all"}-${rayon}-${filtered.length}`}
+                center={mapCenter}
+                zoom={mapZoom}
+                className="h-56 w-full"
+                points={mapPoints}
+                airportIndex={airportIdx}
+                highlightIndex={highlightIdx}
+                route={routePath}
+                onPointClick={(i) => { if (i < filtered.length) setSelectedId(filtered[i].id); }}
+              />
+              <div className="absolute bottom-3 left-3 flex gap-1.5">
+                <div className="flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-bold text-foreground shadow-card backdrop-blur">
+                  <div className="h-2 w-2 rounded-full bg-primary" /> TITIK JEMPUT
+                </div>
+                <div className="flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-bold text-foreground shadow-card backdrop-blur">
+                  <div className="h-2 w-2 rounded-full bg-warning" /> BANDARA KNO
+                </div>
+              </div>
+            </div>
+
+            <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+              {rayons.map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setRayon(r)}
+                  className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-bold transition ${rayon === r ? "bg-primary text-primary-foreground shadow-card" : "bg-card text-muted-foreground border border-border"}`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Cari lokasi atau hotel..."
+                className="w-full rounded-2xl border border-border bg-card py-3.5 pl-11 pr-4 text-sm outline-none shadow-soft focus:border-primary/50"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <AnimatePresence mode="popLayout">
+                {filtered.map((p) => (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    key={p.id}
+                    onClick={() => setSelectedId(p.id)}
+                    className={`group relative flex cursor-pointer items-center gap-4 rounded-3xl border p-4 transition-all duration-300 ${selectedId === p.id ? "border-primary bg-primary/5 shadow-float ring-1 ring-primary/20" : "border-border bg-card hover:border-primary/30 shadow-soft"}`}
+                  >
+                    <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl transition-colors ${selectedId === p.id ? "bg-primary text-primary-foreground" : "bg-secondary text-primary"}`}>
+                      <MapPin className="h-6 w-6" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold tracking-tight text-foreground">{p.name}</span>
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-primary">{p.rayon}</span>
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">{p.address}</p>
+                      <div className="mt-2.5 flex items-center gap-4">
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                          <Navigation className="h-3.5 w-3.5 text-primary" /> {p.distanceKm} km
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                          <Clock className="h-3.5 w-3.5 text-primary" /> {p.etaMin} mnt
+                        </div>
+                      </div>
+                    </div>
+                    {selectedId === p.id && (
+                      <motion.button
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPickup(p);
+                          nav({ to: "/shuttle/schedule" });
+                        }}
+                        className="rounded-full bg-primary p-2.5 text-primary-foreground shadow-card"
+                      >
+                        <ChevronRight className="h-5 w-5" />
+                      </motion.button>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {filtered.length === 0 && (
+                <div className="py-12 text-center">
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-secondary text-primary">
+                    <Search className="h-8 w-8" />
+                  </div>
+                  <h3 className="mt-4 text-sm font-bold">Lokasi tidak ditemukan</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">Coba gunakan kata kunci lain atau pilih rayon berbeda.</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       <AnimatePresence>

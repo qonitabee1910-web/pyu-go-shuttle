@@ -1,11 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import {
-  pickupPoints as seedPickup,
-  getSchedulesForPickup,
-} from "@/shared/types/mock-data";
 import { formatRupiah } from "@/shared/utils/utils";
-import type { PickupPoint, VehicleType, VehicleTier } from "@/shared/types/mock-data";
+import type { PickupPoint, VehicleType, VehicleTier } from "@/shared/types/shuttle";
 
 // Legacy grid cell — kept for backward compatibility with SeatLayoutGrid.
 export type SeatCell =
@@ -170,76 +166,6 @@ const defaultSeatMap = (type: VehicleType): SeatMarker[] => {
   return out;
 };
 
-const seedVehicles = (): VehicleTemplate[] => {
-  const plates = ["BK 1101 GO", "BK 1102 GO", "BK 1103 GO", "BK 2201 GO", "BK 2202 GO", "BK 2203 GO", "BK 3301 GO", "BK 3302 GO", "BK 3303 GO"];
-  let i = 0;
-  const out: VehicleTemplate[] = [];
-  (["minicar", "suv", "hiace"] as VehicleType[]).forEach((type) => {
-    TIER_ORDER.forEach((tier) => {
-      out.push({
-        id: `v-${type}-${tier.toLowerCase()}`,
-        name: VEHICLE_NAMES[type][tier],
-        type,
-        tier,
-        plate: plates[i++] ?? "BK 0000 GO",
-        status: "active",
-        seatMap: defaultSeatMap(type),
-      });
-    });
-  });
-  return out;
-};
-
-const seedSchedules = (vehicles: VehicleTemplate[]): AdminSchedule[] => {
-  const out: AdminSchedule[] = [];
-  const vById = (t: VehicleType) => vehicles.find((v) => v.type === t)!.id;
-  seedPickup.forEach((p) => {
-    getSchedulesForPickup(p.id).forEach((s) => {
-      out.push({
-        id: s.id,
-        pickupId: p.id,
-        vehicleId: vById(s.vehicleType),
-        departureTime: s.departureTime,
-        arrivalTime: s.arrivalTime,
-        price: s.price,
-        active: true,
-      });
-    });
-  });
-  return out;
-};
-
-const FIRST_NAMES = ["Andi", "Budi", "Citra", "Dewi", "Eka", "Fadli", "Galih", "Hana", "Indra", "Joko", "Kirana", "Lina", "Mira", "Nanda", "Oka"];
-const LAST_NAMES = ["Saputra", "Wijaya", "Pratama", "Lestari", "Hidayat", "Nasution", "Tarigan", "Siregar", "Sembiring", "Hutapea"];
-const STATUSES: BookingStatus[] = ["pending", "confirmed", "boarded", "cancelled", "confirmed", "confirmed"];
-
-const seedBookings = (schedules: AdminSchedule[]): AdminBooking[] => {
-  const out: AdminBooking[] = [];
-  for (let i = 0; i < 28; i++) {
-    const s = schedules[Math.floor(Math.random() * schedules.length)];
-    const seatCount = 1 + Math.floor(Math.random() * 3);
-    const seats = Array.from({ length: seatCount }, (_, k) => String(1 + Math.floor(Math.random() * 12) + k));
-    const fn = FIRST_NAMES[i % FIRST_NAMES.length];
-    const ln = LAST_NAMES[(i * 3) % LAST_NAMES.length];
-    const daysAgo = Math.floor(Math.random() * 5);
-    const date = new Date();
-    date.setDate(date.getDate() - daysAgo);
-    out.push({
-      id: `bk-${i}`,
-      code: "PYU" + (1000 + i),
-      passengerName: `${fn} ${ln}`,
-      passengerPhone: "+62 812-" + (1000 + i * 7) + "-" + (2000 + i * 3),
-      pickupId: s.pickupId,
-      scheduleId: s.id,
-      seats,
-      amount: s.price * seatCount,
-      status: STATUSES[i % STATUSES.length],
-      createdAt: date.toISOString(),
-    });
-  }
-  return out;
-};
-
 interface AdminState {
   pickupPoints: PickupPoint[];
   vehicles: VehicleTemplate[];
@@ -262,17 +188,13 @@ interface AdminState {
   resetAll: () => void;
 }
 
-const buildSeed = () => {
-  const vehicles = seedVehicles();
-  const schedules = seedSchedules(vehicles);
-  const bookings = seedBookings(schedules);
-  return { vehicles, schedules, bookings, pickupPoints: seedPickup };
-};
-
 export const useAdmin = create<AdminState>()(
   persist(
     (set) => ({
-      ...buildSeed(),
+      pickupPoints: [],
+      vehicles: [],
+      schedules: [],
+      bookings: [],
       upsertPickup: (p) =>
         set((st) => {
           const ex = st.pickupPoints.findIndex((x) => x.id === p.id);

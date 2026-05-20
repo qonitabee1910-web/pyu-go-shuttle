@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { Bell, Search, Plane, Car, MapPin, ChevronRight, Sparkles, Wallet, Gift, ShieldCheck } from "lucide-react";
@@ -5,8 +6,12 @@ import logo from "@/assets/logo.png";
 import heroBg from "@/assets/hero-bg.jpg";
 import promo1 from "@/assets/promo-1.jpg";
 import promo2 from "@/assets/promo-2.jpg";
-import { pickupPoints, popularRoutes, KNO_AIRPORT } from "@/shared/types/mock-data";
-import { formatRupiah } from "@/shared/utils/utils";
+import { KNO_AIRPORT } from "@/shared/types/shuttle";
+import { formatRupiah, getJakartaNow } from "@/shared/utils/utils";
+import { useServerFn } from "@tanstack/react-start";
+import { listHomePageData } from "@/features/shuttle/services/shuttle.functions";
+import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,6 +27,24 @@ const fade = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
 
 function HomePage() {
   const promoImgs = [promo1, promo2];
+
+  const greeting = useMemo(() => {
+    const hour = getJakartaNow().getHours();
+    if (hour < 11) return "Selamat pagi";
+    if (hour < 15) return "Selamat siang";
+    if (hour < 19) return "Selamat sore";
+    return "Selamat malam";
+  }, []);
+
+  const fetchHome = useServerFn(listHomePageData);
+  const { data, isLoading } = useQuery({
+    queryKey: ["home-data"],
+    queryFn: () => fetchHome(),
+  });
+
+  const pickupPoints = data?.pickups ?? [];
+  const popularRoutes = data?.popularRoutes ?? [];
+
   return (
     <div className="min-h-screen">
       {/* Hero */}
@@ -40,7 +63,7 @@ function HomePage() {
           </div>
 
           <motion.div {...fade} className="mt-6">
-            <p className="text-sm/5 opacity-90">Halo, selamat pagi 👋</p>
+            <p className="text-sm/5 opacity-90">Halo, {greeting} 👋</p>
             <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Mau ke mana hari ini?</h1>
           </motion.div>
 
@@ -111,26 +134,39 @@ function HomePage() {
       <section className="mt-6">
         <SectionHeader title="Rute Populer ke KNO" cta="Semua rute" />
         <div className="space-y-2 px-5">
-          {popularRoutes.map((r) => (
-            <Link
-              key={r.id}
-              to="/shuttle/pickup"
-              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-soft transition hover:shadow-card"
-            >
-              <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary-soft text-primary">
-                <Plane className="h-5 w-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1 text-sm font-semibold">
-                  <span className="truncate">{r.from}</span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  <span className="truncate">{r.to}</span>
+          {isLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-soft">
+                <Skeleton className="h-11 w-11 rounded-xl" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-24" />
                 </div>
-                <div className="text-xs text-muted-foreground">{r.duration} • mulai {formatRupiah(r.price)}</div>
+                <Skeleton className="h-4 w-4" />
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
-          ))}
+            ))
+          ) : (
+            popularRoutes.map((r) => (
+              <Link
+                key={r.id}
+                to="/shuttle/pickup"
+                className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-soft transition hover:shadow-card"
+              >
+                <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary-soft text-primary">
+                  <Plane className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1 text-sm font-semibold">
+                    <span className="truncate">{r.from}</span>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <span className="truncate">{r.to}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">{r.duration} • mulai {formatRupiah(r.price)}</div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+            ))
+          )}
         </div>
       </section>
 
@@ -138,27 +174,41 @@ function HomePage() {
       <section className="mt-6">
         <SectionHeader title="Titik Jemput Terdekat" cta="Lihat peta" />
         <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2">
-          {pickupPoints.slice(0, 5).map((p) => (
-            <Link
-              key={p.id}
-              to="/shuttle/pickup"
-              className="w-56 shrink-0 snap-start rounded-2xl border border-border bg-card p-3 shadow-soft"
-            >
-              <div className="flex items-center gap-2 text-xs font-semibold text-primary">
-                <span className="rounded-full bg-primary-soft px-2 py-0.5">{p.rayon}</span>
-                <span className="text-muted-foreground">{p.distanceKm} km</span>
+          {isLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="w-56 shrink-0 snap-start rounded-2xl border border-border bg-card p-3 shadow-soft space-y-3">
+                <Skeleton className="h-4 w-20 rounded-full" />
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <div className="flex justify-between border-t border-border pt-2">
+                  <Skeleton className="h-3 w-8" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
               </div>
-              <div className="mt-2 line-clamp-1 text-sm font-bold">{p.name}</div>
-              <div className="mt-0.5 flex items-start gap-1 text-xs text-muted-foreground">
-                <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
-                <span className="line-clamp-2">{p.address}</span>
-              </div>
-              <div className="mt-3 flex items-center justify-between border-t border-border pt-2 text-xs">
-                <span className="text-muted-foreground">ETA</span>
-                <span className="font-semibold">{p.etaMin} mnt</span>
-              </div>
-            </Link>
-          ))}
+            ))
+          ) : (
+            pickupPoints.slice(0, 5).map((p: any) => (
+              <Link
+                key={p.id}
+                to="/shuttle/pickup"
+                className="w-56 shrink-0 snap-start rounded-2xl border border-border bg-card p-3 shadow-soft"
+              >
+                <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                  <span className="rounded-full bg-primary-soft px-2 py-0.5">{p.rayon ?? "Rayon A"}</span>
+                  <span className="text-muted-foreground">{p.distance_km ?? 2.4} km</span>
+                </div>
+                <div className="mt-2 line-clamp-1 text-sm font-bold">{p.name}</div>
+                <div className="mt-0.5 flex items-start gap-1 text-xs text-muted-foreground">
+                  <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
+                  <span className="line-clamp-2">{p.address}</span>
+                </div>
+                <div className="mt-3 flex items-center justify-between border-t border-border pt-2 text-xs">
+                  <span className="text-muted-foreground">ETA</span>
+                  <span className="font-semibold">{p.eta_min ?? 8} mnt</span>
+                </div>
+              </Link>
+            ))
+          )}
         </div>
       </section>
 
@@ -168,7 +218,9 @@ function HomePage() {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wide text-primary">Jadwal Berikutnya</div>
-              <div className="mt-1 text-base font-bold">Hermes Palace → {KNO_AIRPORT.code}</div>
+              <div className="mt-1 text-base font-bold">
+                {pickupPoints[0]?.name ?? "Hermes Palace"} → {KNO_AIRPORT.code}
+              </div>
               <div className="text-xs text-muted-foreground">Berangkat 14:30 • Toyota Hiace</div>
             </div>
             <Link

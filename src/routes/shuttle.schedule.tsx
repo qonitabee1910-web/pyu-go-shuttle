@@ -5,13 +5,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import { format, addDays, isSameDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { ArrowRight, Users, Bus, Loader2 } from "lucide-react";
+import { ArrowRight, Users, Bus } from "lucide-react";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { BookingStepper } from "@/features/shuttle/components/BookingStepper";
 import { formatRupiah } from "@/shared/utils/utils";
-import { KNO_AIRPORT, type Schedule } from "@/shared/types/mock-data";
+import { KNO_AIRPORT, type Schedule } from "@/shared/types/shuttle";
 import { useBooking } from "@/features/booking/store/booking";
 import { listSchedules } from "@/features/shuttle/services/shuttle.functions";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 export const Route = createFileRoute("/shuttle/schedule")({
   head: () => ({ meta: [{ title: "Pilih Jadwal — PYU-GO" }] }),
@@ -42,6 +43,7 @@ function SchedulePage() {
       rows.map((r: any) => ({
         id: r.id,
         pickupId: r.pickup_point_id,
+        vehicleId: r.vehicle_id,
         departureTime: fmtTime(r.departure_at),
         arrivalTime: r.arrival_at ? fmtTime(r.arrival_at) : "—",
         vehicleType: r.vehicles?.type ?? "hiace",
@@ -80,61 +82,103 @@ function SchedulePage() {
         })}
       </div>
 
-      <div className="mx-auto max-w-md space-y-3 p-4">
-        {isLoading && (
-          <div className="flex items-center justify-center rounded-2xl bg-card p-6 text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memuat jadwal...
-          </div>
-        )}
-        {!isLoading && schedules.length === 0 && (
-          <div className="rounded-2xl bg-card p-8 text-center text-sm text-muted-foreground">Tidak ada jadwal untuk tanggal ini.</div>
-        )}
-        {schedules.map((s, i) => (
-          <motion.button key={s.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} whileTap={{ scale: 0.98 }}
-            onClick={() => { setDate(dateStr); setSchedule(s); nav({ to: "/shuttle/seats" }); }}
-            className="block w-full rounded-2xl bg-card p-4 text-left shadow-soft transition hover:shadow-card">
-            <div className="flex items-start gap-3">
-              <div className="grid h-14 w-20 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary">
-                <Bus className="h-6 w-6" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-bold truncate">{s.vehicleName}</div>
-                <div className="text-[11px] text-muted-foreground">{s.plate}</div>
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">{s.className}</span>
-                  <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-success/10 text-success">
-                    <Users className="h-3 w-3" /> {s.seatsTotal} kursi
-                  </span>
+      <div className="mx-auto max-w-md space-y-4 p-4">
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="block w-full rounded-2xl bg-card p-4 shadow-soft space-y-4">
+              <div className="flex items-start gap-3">
+                <Skeleton className="h-14 w-20 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-3 w-24" />
+                  <div className="flex gap-1.5 pt-1">
+                    <Skeleton className="h-4 w-12 rounded-full" />
+                    <Skeleton className="h-4 w-12 rounded-full" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Skeleton className="h-5 w-20" />
+                  <Skeleton className="h-3 w-12 ml-auto" />
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-base font-extrabold text-primary">{formatRupiah(s.price)}</div>
-                <div className="text-[10px] text-muted-foreground">per kursi</div>
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-3 border-t border-dashed border-border pt-3">
-              <div className="flex flex-col items-center">
-                <span className="text-lg font-extrabold">{s.departureTime}</span>
-                <span className="text-[10px] text-muted-foreground">Berangkat</span>
-              </div>
-              <div className="flex flex-1 flex-col items-center">
-                <div className="text-[10px] text-muted-foreground">1j 30m</div>
-                <div className="my-1 flex w-full items-center gap-1 text-primary">
-                  <div className="h-1 w-2 rounded-full bg-primary" />
-                  <div className="h-px flex-1 bg-primary/40" />
-                  <ArrowRight className="h-3 w-3" />
-                  <div className="h-px flex-1 bg-primary/40" />
-                  <div className="h-1 w-2 rounded-full bg-primary" />
+              <div className="flex items-center gap-3 border-t border-dashed border-border pt-3">
+                <Skeleton className="h-6 w-12" />
+                <div className="flex-1 px-4">
+                  <Skeleton className="h-2 w-full" />
                 </div>
-                <div className="text-[10px] text-muted-foreground">Direct</div>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="text-lg font-extrabold">{s.arrivalTime}</span>
-                <span className="text-[10px] text-muted-foreground">Tiba KNO</span>
+                <Skeleton className="h-6 w-12" />
               </div>
             </div>
-          </motion.button>
-        ))}
+          ))
+        ) : (
+          <>
+            {schedules.length === 0 && (
+              <div className="rounded-2xl bg-card p-12 text-center">
+                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-secondary text-primary">
+                  <Bus className="h-8 w-8" />
+                </div>
+                <h3 className="mt-4 text-sm font-bold text-foreground">Jadwal tidak tersedia</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Tidak ada keberangkatan untuk tanggal ini. Silakan pilih tanggal lain.</p>
+              </div>
+            )}
+            {schedules.map((s, i) => (
+              <motion.button
+                key={s.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setDate(dateStr);
+                  setSchedule(s);
+                  nav({ to: "/shuttle/seats" });
+                }}
+                className="block w-full rounded-2xl bg-card p-4 text-left shadow-soft transition hover:shadow-card group"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="grid h-14 w-20 shrink-0 place-items-center rounded-lg bg-secondary text-primary transition-colors group-hover:bg-primary-soft">
+                    <Bus className="h-6 w-6" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold truncate tracking-tight text-foreground">{s.vehicleName}</div>
+                    <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{s.plate}</div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary">{s.className}</span>
+                      <span className="flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-[10px] font-bold text-success">
+                        <Users className="h-3 w-3" /> {s.seatsTotal} kursi
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-extrabold text-primary">{formatRupiah(s.price)}</div>
+                    <div className="text-[10px] font-medium text-muted-foreground">per kursi</div>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center gap-3 border-t border-dashed border-border pt-4">
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg font-extrabold tracking-tight">{s.departureTime}</span>
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Berangkat</span>
+                  </div>
+                  <div className="flex flex-1 flex-col items-center px-2">
+                    <div className="text-[10px] font-bold text-muted-foreground">1j 30m</div>
+                    <div className="my-1.5 flex w-full items-center gap-1 text-primary/40">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      <div className="h-[1.5px] flex-1 bg-gradient-to-r from-primary to-primary/20" />
+                      <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                      <div className="h-[1.5px] flex-1 bg-gradient-to-l from-primary to-primary/20" />
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    </div>
+                    <div className="text-[10px] font-bold text-primary/70">Langsung</div>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg font-extrabold tracking-tight">{s.arrivalTime}</span>
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Tiba KNO</span>
+                  </div>
+                </div>
+              </motion.button>
+            ))}
+          </>
+        )}
       </div>
     </div>
   );

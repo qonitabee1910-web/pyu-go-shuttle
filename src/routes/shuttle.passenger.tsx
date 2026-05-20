@@ -1,5 +1,6 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { bookingPassengerSchema } from "@/shared/utils/validation";
 import { motion } from "framer-motion";
 import { User, Phone, Info } from "lucide-react";
 import { PageHeader } from "@/shared/components/PageHeader";
@@ -18,14 +19,10 @@ function PassengerPage() {
   const nav = useNavigate();
   const [name, setName] = useState(passengerName);
   const [phone, setPhone] = useState(passengerPhone);
-  const [touched, setTouched] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   if (!pickup || !schedule || selectedSeats.length === 0)
     return <Navigate to="/shuttle/pickup" />;
-
-  const nameOk = name.trim().length >= 3;
-  const phoneOk = /^[0-9+\s-]{10,16}$/.test(phone.trim());
-  const valid = nameOk && phoneOk;
 
   const normalizePhone = (p: string) => {
     const trimmed = p.trim().replace(/\s|-/g, "");
@@ -34,11 +31,19 @@ function PassengerPage() {
   };
 
   const submit = () => {
-    setTouched(true);
-    if (!valid) {
-      toast.error("Mohon lengkapi data dengan benar");
+    setErrors({});
+    const result = bookingPassengerSchema.safeParse({ name, phone });
+    
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.issues.forEach((issue) => {
+        if (issue.path[0]) fieldErrors[issue.path[0].toString()] = issue.message;
+      });
+      setErrors(fieldErrors);
+      toast.error(result.error.issues[0].message);
       return;
     }
+
     setPassenger(name.trim(), normalizePhone(phone));
     nav({ to: "/shuttle/payment" });
   };
@@ -60,11 +65,11 @@ function PassengerPage() {
           <label className="mt-4 block">
             <span className="text-xs font-semibold">Nama lengkap</span>
             <div
-              className={`mt-1 flex items-center gap-2 rounded-xl border px-3 py-2.5 ${
-                touched && !nameOk ? "border-destructive" : "border-border"
+              className={`mt-1 flex items-center gap-2 rounded-xl border px-3 py-2.5 transition-colors ${
+                errors.name ? "border-destructive bg-destructive/5" : "border-border focus-within:border-primary/50"
               }`}
             >
-              <User className="h-4 w-4 text-muted-foreground" />
+              <User className={`h-4 w-4 ${errors.name ? 'text-destructive' : 'text-muted-foreground'}`} />
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -73,9 +78,9 @@ function PassengerPage() {
                 maxLength={80}
               />
             </div>
-            {touched && !nameOk && (
-              <span className="mt-1 text-[11px] text-destructive">
-                Minimal 3 huruf
+            {errors.name && (
+              <span className="mt-1 text-[11px] font-medium text-destructive">
+                {errors.name}
               </span>
             )}
           </label>
@@ -83,11 +88,11 @@ function PassengerPage() {
           <label className="mt-3 block">
             <span className="text-xs font-semibold">Nomor HP / WhatsApp</span>
             <div
-              className={`mt-1 flex items-center gap-2 rounded-xl border px-3 py-2.5 ${
-                touched && !phoneOk ? "border-destructive" : "border-border"
+              className={`mt-1 flex items-center gap-2 rounded-xl border px-3 py-2.5 transition-colors ${
+                errors.phone ? "border-destructive bg-destructive/5" : "border-border focus-within:border-primary/50"
               }`}
             >
-              <Phone className="h-4 w-4 text-muted-foreground" />
+              <Phone className={`h-4 w-4 ${errors.phone ? 'text-destructive' : 'text-muted-foreground'}`} />
               <input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -97,12 +102,12 @@ function PassengerPage() {
                 maxLength={16}
               />
             </div>
-            {touched && !phoneOk && (
-              <span className="mt-1 text-[11px] text-destructive">
-                Format nomor tidak valid (10–16 digit)
+            {errors.phone && (
+              <span className="mt-1 text-[11px] font-medium text-destructive">
+                {errors.phone}
               </span>
             )}
-            {!(touched && !phoneOk) && (
+            {!errors.phone && (
               <span className="mt-1 block text-[11px] text-muted-foreground">
                 Format: 08xx atau +628xx
               </span>

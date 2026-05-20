@@ -9,7 +9,7 @@ import { Calendar, Clock, MapPin, User, Bus, Share2, Navigation, Download, Loade
 import { PageHeader } from "@/shared/components/PageHeader";
 import { useBooking } from "@/features/booking/store/booking";
 import { formatRupiah } from "@/shared/utils/utils";
-import { KNO_AIRPORT } from "@/shared/types/mock-data";
+import { KNO_AIRPORT } from "@/shared/types/shuttle";
 import { getBooking } from "@/features/booking/services/bookings.functions";
 import { toast } from "sonner";
 

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import type { VehicleType } from "@/shared/types/mock-data";
+import type { VehicleType } from "@/shared/types/shuttle";
 import { SeatGlyph } from "@/features/admin/components/SeatGlyph";
 import { cn } from "@/shared/utils/utils";
 

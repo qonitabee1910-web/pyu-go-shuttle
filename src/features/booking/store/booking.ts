@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { PickupPoint, Schedule, VehicleTier } from "@/shared/types/mock-data";
+import type { PickupPoint, Schedule, VehicleTier } from "@/shared/types/shuttle";
 
 interface BookingState {
   pickup: PickupPoint | null;

@@ -5,7 +5,7 @@ import { MapPin, Navigation, Car, Zap, Crown } from "lucide-react";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { MapView } from "@/shared/components/MapView";
 import { formatRupiah } from "@/shared/utils/utils";
-import { nearbyDrivers } from "@/shared/types/mock-data";
+import { nearbyDrivers } from "@/shared/types/shuttle";
 
 export const Route = createFileRoute("/ride")({
   head: () => ({ meta: [{ title: "Ride Hailing — PYU-GO" }] }),

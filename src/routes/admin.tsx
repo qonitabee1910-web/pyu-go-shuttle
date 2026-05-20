@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { SidebarProvider, SidebarTrigger } from "@/shared/components/ui/sidebar";
@@ -13,42 +13,24 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — PYU-GO" }] }),
+  beforeLoad: async ({ context }) => {
+    // Note: We use the server function directly. 
+    // In TanStack Start, this will run on the server if possible.
+    try {
+      const res = await checkIsAdmin();
+      if (!res.isAdmin) {
+        throw redirect({ to: "/", search: { error: "Akses admin diperlukan" } });
+      }
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("redirect")) throw e;
+      throw redirect({ to: "/auth/login" });
+    }
+  },
   component: AdminLayout,
 });
 
 function AdminLayout() {
   const nav = useNavigate();
-  const [ready, setReady] = useState(false);
-  const check = useServerFn(checkIsAdmin);
-
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        nav({ to: "/auth/login" });
-        return;
-      }
-      try {
-        const res = await check();
-        if (!res.isAdmin) {
-          toast.error("Akses admin diperlukan");
-          nav({ to: "/" });
-          return;
-        }
-        setReady(true);
-      } catch {
-        nav({ to: "/" });
-      }
-    })();
-  }, [nav, check]);
-
-  if (!ready) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <SidebarProvider>

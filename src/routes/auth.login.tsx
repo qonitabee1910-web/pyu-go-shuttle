@@ -7,6 +7,7 @@ import logo from "@/assets/logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { handleError } from "@/shared/utils/error-handler";
+import { loginSchema } from "@/shared/utils/validation";
 
 export const Route = createFileRoute("/auth/login")({
   head: () => ({ meta: [{ title: "Masuk — PYU-GO" }] }),
@@ -18,24 +19,27 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const nav = useNavigate();
   const search = Route.useSearch();
   const redirect = (search as any).redirect || "/";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      toast.success("Berhasil masuk");
-      nav({ to: redirect });
-    } catch (err: any) {
-      handleError(err, "Login");
-    } finally {
-      setLoading(false);
+    setErrors({});
+    
+    const result = loginSchema.safeParse({ email, password });
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0]) fieldErrors[err.path[0].toString()] = err.message;
+      });
+      setErrors(fieldErrors);
+      toast.error(result.error.errors[0].message);
+      return;
     }
-  };
+
+    setLoading(true);
 
   const google = async () => {
     setLoading(true);
@@ -63,16 +67,17 @@ function LoginPage() {
 
       <motion.div initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mt-8 min-h-[60vh] rounded-t-3xl bg-card p-6 shadow-float">
         <form onSubmit={submit} className="space-y-3">
-          <div className="flex items-center gap-2 rounded-2xl border border-border px-4 py-3">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="w-full bg-transparent text-sm outline-none" />
-          </div>
-          <div className="flex items-center gap-2 rounded-2xl border border-border px-4 py-3">
-            <Lock className="h-4 w-4 text-muted-foreground" />
-            <input type={show ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Kata sandi" className="w-full bg-transparent text-sm outline-none" />
-            <button type="button" onClick={() => setShow(!show)}>
-              {show ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
-            </button>
+          <Field icon={<Mail className="h-4 w-4" />} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} />
+          
+          <div className="space-y-1">
+            <div className={`flex items-center gap-2 rounded-2xl border px-4 py-3 transition-colors ${errors.password ? 'border-destructive bg-destructive/5' : 'border-border focus-within:border-primary/50'}`}>
+              <Lock className={`h-4 w-4 ${errors.password ? 'text-destructive' : 'text-muted-foreground'}`} />
+              <input type={show ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Kata sandi" className="w-full bg-transparent text-sm outline-none" />
+              <button type="button" onClick={() => setShow(!show)}>
+                {show ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+              </button>
+            </div>
+            {errors.password && <p className="px-1 text-[10px] font-medium text-destructive">{errors.password}</p>}
           </div>
 
           <button disabled={loading} className="mt-2 w-full rounded-full bg-primary py-3.5 text-sm font-bold text-primary-foreground shadow-card disabled:opacity-60">
@@ -92,6 +97,18 @@ function LoginPage() {
           Belum punya akun? <Link to="/auth/register" className="font-bold text-primary">Daftar</Link>
         </div>
       </motion.div>
+    </div>
+  );
+}
+
+function Field({ icon, error, ...props }: { icon: React.ReactNode, error?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div className="space-y-1">
+      <div className={`flex items-center gap-2 rounded-2xl border px-4 py-3 transition-colors ${error ? 'border-destructive bg-destructive/5' : 'border-border focus-within:border-primary/50'}`}>
+        <span className={`${error ? 'text-destructive' : 'text-muted-foreground'}`}>{icon}</span>
+        <input required {...props} className="w-full bg-transparent text-sm outline-none" />
+      </div>
+      {error && <p className="px-1 text-[10px] font-medium text-destructive">{error}</p>}
     </div>
   );
 }
