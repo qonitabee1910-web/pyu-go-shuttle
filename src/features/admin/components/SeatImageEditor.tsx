@@ -72,7 +72,7 @@ export function SeatImageEditor({ imageUrl, markers, onImageChange, onMarkersCha
 
 
   const handleUpload = async (file: File) => {
-    const url = await fileToDataUrl(file);
+    const url = await fitImageToCanvas(file);
     // Rough size estimate from data URL length.
     const approxBytes = Math.round((url.length * 3) / 4);
     if (approxBytes > 500_000) {
