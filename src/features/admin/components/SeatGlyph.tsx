@@ -24,13 +24,13 @@ export function SeatGlyph({
   className,
   selectedInEditor,
 }: Props) {
-  // Colors via semantic tokens (Tailwind classes resolved to CSS vars).
+  // Kontras tegas: hijau = kosong, biru = dipilih, merah = terisi.
   const palette =
     state === "selected"
-      ? { fill: "hsl(var(--primary))", stroke: "hsl(var(--primary))", text: "hsl(var(--primary-foreground))" }
+      ? { fill: "var(--seat-selected)", stroke: "var(--seat-selected)", text: "var(--primary-foreground)" }
       : state === "booked"
-        ? { fill: "hsl(var(--muted))", stroke: "hsl(var(--muted-foreground) / 0.4)", text: "hsl(var(--muted-foreground))" }
-        : { fill: "hsl(var(--background))", stroke: "hsl(var(--primary) / 0.7)", text: "hsl(var(--foreground))" };
+        ? { fill: "var(--seat-booked)", stroke: "var(--seat-booked-foreground)", text: "var(--seat-booked-foreground)" }
+        : { fill: "var(--seat-available)", stroke: "var(--seat-available-foreground)", text: "var(--seat-available-foreground)" };
 
   const h = Math.round(size * 1.12);
   return (
