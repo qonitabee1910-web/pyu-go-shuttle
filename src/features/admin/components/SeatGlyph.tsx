@@ -24,13 +24,13 @@ export function SeatGlyph({
   className,
   selectedInEditor,
 }: Props) {
-  // Colors via semantic tokens (Tailwind classes resolved to CSS vars).
+  // Kontras tegas: hijau = kosong, biru = dipilih, merah = terisi.
   const palette =
     state === "selected"
-      ? { fill: "hsl(var(--primary))", stroke: "hsl(var(--primary))", text: "hsl(var(--primary-foreground))" }
+      ? { fill: "var(--seat-selected)", stroke: "var(--seat-selected)", text: "var(--primary-foreground)" }
       : state === "booked"
-        ? { fill: "hsl(var(--muted))", stroke: "hsl(var(--muted-foreground) / 0.4)", text: "hsl(var(--muted-foreground))" }
-        : { fill: "hsl(var(--background))", stroke: "hsl(var(--primary) / 0.7)", text: "hsl(var(--foreground))" };
+        ? { fill: "var(--seat-booked)", stroke: "var(--seat-booked-foreground)", text: "var(--seat-booked-foreground)" }
+        : { fill: "var(--seat-available)", stroke: "var(--seat-available-foreground)", text: "var(--seat-available-foreground)" };
 
   const h = Math.round(size * 1.12);
   return (
@@ -56,14 +56,14 @@ export function SeatGlyph({
           <>
             <defs>
               <pattern id="seat-stripe" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                <line x1="0" y1="0" x2="0" y2="6" stroke="hsl(var(--muted-foreground) / 0.35)" strokeWidth="2" />
+                <line x1="0" y1="0" x2="0" y2="6" stroke="var(--seat-booked-foreground)" strokeWidth="2" opacity="0.5" />
               </pattern>
             </defs>
             <rect x="3" y="2" width="34" height="36" rx="6" fill="url(#seat-stripe)" />
           </>
         )}
         {selectedInEditor && (
-          <rect x="0.5" y="0.5" width="39" height="43" rx="7" fill="none" stroke="hsl(var(--ring))" strokeWidth="1.5" strokeDasharray="3 2" />
+          <rect x="0.5" y="0.5" width="39" height="43" rx="7" fill="none" stroke="var(--ring)" strokeWidth="1.5" strokeDasharray="3 2" />
         )}
       </svg>
       {label && (

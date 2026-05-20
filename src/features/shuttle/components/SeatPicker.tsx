@@ -96,13 +96,12 @@ export function SeatPicker({
                       onToggle(cell);
                     }}
                     className={[
-                      "relative h-10 w-full rounded-xl text-xs font-bold transition-all",
-                      "border-2",
+                      "relative h-10 w-full rounded-xl text-xs font-bold transition-all border-2",
                       isSelected
-                        ? "bg-primary text-primary-foreground border-primary shadow-card"
+                        ? "bg-seat-selected text-primary-foreground border-seat-selected shadow-card"
                         : isBooked
-                          ? "bg-destructive/15 text-destructive border-destructive/30 cursor-not-allowed line-through"
-                          : "bg-primary-soft text-primary border-transparent hover:border-primary",
+                          ? "bg-seat-booked text-seat-booked-foreground border-seat-booked-foreground/40 cursor-not-allowed line-through"
+                          : "bg-seat-available text-seat-available-foreground border-seat-available-foreground/40 hover:border-seat-available-foreground",
                     ].join(" ")}
                   >
                     {cell}
@@ -116,9 +115,9 @@ export function SeatPicker({
 
       {/* Legend */}
       <div className="mt-4 flex flex-wrap justify-center gap-3 text-xs">
-        <LegendDot color="bg-primary-soft border-primary-soft" label="Tersedia" />
-        <LegendDot color="bg-primary border-primary" label="Dipilih" />
-        <LegendDot color="bg-destructive/15 border-destructive/30" label="Terisi" />
+        <LegendDot color="bg-seat-available border-seat-available-foreground/50" label="Tersedia" />
+        <LegendDot color="bg-seat-selected border-seat-selected" label="Dipilih" />
+        <LegendDot color="bg-seat-booked border-seat-booked-foreground/50" label="Terisi" />
       </div>
     </div>
   );

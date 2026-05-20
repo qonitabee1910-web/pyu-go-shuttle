@@ -43,8 +43,10 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-seat-available: var(--seat-available);
+  --color-seat-available-foreground: var(--seat-available-foreground);
   --color-seat-selected: var(--seat-selected);
   --color-seat-booked: var(--seat-booked);
+  --color-seat-booked-foreground: var(--seat-booked-foreground);
   --color-seat-disabled: var(--seat-disabled);
 }
 
@@ -87,10 +89,12 @@
   --input: oklch(0.93 0.012 250);
   --ring: oklch(0.58 0.18 252);
 
-  /* Seat picker */
-  --seat-available: oklch(0.92 0.04 250);
+  /* Seat picker — kontras tegas: hijau=kosong, biru=dipilih, merah=terisi */
+  --seat-available: oklch(0.93 0.09 152);          /* hijau pastel */
+  --seat-available-foreground: oklch(0.42 0.14 152); /* hijau pekat */
   --seat-selected: oklch(0.58 0.18 252);
-  --seat-booked: oklch(0.7 0.18 27);
+  --seat-booked: oklch(0.92 0.08 27);              /* merah pastel */
+  --seat-booked-foreground: oklch(0.5 0.2 27);     /* merah pekat */
   --seat-disabled: oklch(0.85 0.005 250);
 
   --chart-1: oklch(0.58 0.18 252);
