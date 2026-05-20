@@ -43,8 +43,10 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-seat-available: var(--seat-available);
+  --color-seat-available-foreground: var(--seat-available-foreground);
   --color-seat-selected: var(--seat-selected);
   --color-seat-booked: var(--seat-booked);
+  --color-seat-booked-foreground: var(--seat-booked-foreground);
   --color-seat-disabled: var(--seat-disabled);
 }
 
