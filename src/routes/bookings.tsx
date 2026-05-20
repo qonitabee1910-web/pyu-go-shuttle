@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/shared/hooks/use-auth";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import { Ticket, ChevronRight, Plane, Clock, Bus, MapPin, Calendar, Loader2, CheckCircle2 } from "lucide-react";
@@ -30,10 +32,22 @@ function BookingsPage() {
   const [tab, setTab] = useState<string>("Semua");
   const [openId, setOpenId] = useState<string | null>(null);
   const fetchList = useServerFn(listMyBookings);
+  const qc = useQueryClient();
+  const { user } = useAuth();
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["my-bookings"],
     queryFn: () => fetchList(),
   });
+
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase
+      .channel(`bookings:${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "bookings", filter: `user_id=eq.${user.id}` },
+        () => qc.invalidateQueries({ queryKey: ["my-bookings"] }))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user, qc]);
 
   const tabs = ["Semua", "pending", "paid", "completed"];
   const tabLabel = (t: string) => (t === "Semua" ? "Semua" : STATUS_LABEL[t]?.label ?? t);
