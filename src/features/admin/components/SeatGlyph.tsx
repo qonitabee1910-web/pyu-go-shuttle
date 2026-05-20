@@ -56,7 +56,7 @@ export function SeatGlyph({
           <>
             <defs>
               <pattern id="seat-stripe" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                <line x1="0" y1="0" x2="0" y2="6" stroke="hsl(var(--muted-foreground) / 0.35)" strokeWidth="2" />
+                <line x1="0" y1="0" x2="0" y2="6" stroke="var(--seat-booked-foreground)" strokeWidth="2" opacity="0.5" />
               </pattern>
             </defs>
             <rect x="3" y="2" width="34" height="36" rx="6" fill="url(#seat-stripe)" />
