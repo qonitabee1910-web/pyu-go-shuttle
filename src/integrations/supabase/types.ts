@@ -125,6 +125,7 @@ export type Database = {
           amount: number
           booking_id: string
           created_at: string
+          external_id: string | null
           id: string
           method: string
           paid_at: string | null
@@ -134,6 +135,7 @@ export type Database = {
           amount: number
           booking_id: string
           created_at?: string
+          external_id?: string | null
           id?: string
           method?: string
           paid_at?: string | null
@@ -143,6 +145,7 @@ export type Database = {
           amount?: number
           booking_id?: string
           created_at?: string
+          external_id?: string | null
           id?: string
           method?: string
           paid_at?: string | null
@@ -240,34 +243,40 @@ export type Database = {
           created_at: string
           driver_id: string | null
           dropoff: Json
+          eta_min: number | null
           fare: number
           id: string
           pickup: Json
           status: Database["public"]["Enums"]["ride_status"]
           updated_at: string
           user_id: string
+          vehicle_meta: Json | null
         }
         Insert: {
           created_at?: string
           driver_id?: string | null
           dropoff: Json
+          eta_min?: number | null
           fare: number
           id?: string
           pickup: Json
           status?: Database["public"]["Enums"]["ride_status"]
           updated_at?: string
           user_id: string
+          vehicle_meta?: Json | null
         }
         Update: {
           created_at?: string
           driver_id?: string | null
           dropoff?: Json
+          eta_min?: number | null
           fare?: number
           id?: string
           pickup?: Json
           status?: Database["public"]["Enums"]["ride_status"]
           updated_at?: string
           user_id?: string
+          vehicle_meta?: Json | null
         }
         Relationships: []
       }
@@ -492,6 +501,33 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_locations: {
+        Row: {
+          heading: number | null
+          lat: number
+          lng: number
+          speed: number | null
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          heading?: number | null
+          lat: number
+          lng: number
+          speed?: number | null
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          heading?: number | null
+          lat?: number
+          lng?: number
+          speed?: number | null
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: []
+      }
       vehicles: {
         Row: {
           active: boolean
@@ -530,6 +566,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_match_ride_orders: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -537,6 +574,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      release_expired_holds: { Args: never; Returns: number }
     }
     Enums: {
       app_role: "admin" | "driver" | "customer"
