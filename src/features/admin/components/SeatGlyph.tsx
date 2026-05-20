@@ -63,7 +63,7 @@ export function SeatGlyph({
           </>
         )}
         {selectedInEditor && (
-          <rect x="0.5" y="0.5" width="39" height="43" rx="7" fill="none" stroke="hsl(var(--ring))" strokeWidth="1.5" strokeDasharray="3 2" />
+          <rect x="0.5" y="0.5" width="39" height="43" rx="7" fill="none" stroke="var(--ring)" strokeWidth="1.5" strokeDasharray="3 2" />
         )}
       </svg>
       {label && (
