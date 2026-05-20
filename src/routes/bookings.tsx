@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/shared/hooks/use-auth";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import { Ticket, ChevronRight, Plane, Clock, Bus, MapPin, Calendar, Loader2, CheckCircle2 } from "lucide-react";
