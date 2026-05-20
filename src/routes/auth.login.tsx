@@ -40,6 +40,17 @@ function LoginPage() {
     }
 
     setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      toast.success("Berhasil masuk");
+      nav({ to: redirect });
+    } catch (err: any) {
+      handleError(err, "Login");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const google = async () => {
     setLoading(true);
