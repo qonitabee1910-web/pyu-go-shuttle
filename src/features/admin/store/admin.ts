@@ -238,7 +238,7 @@ export const useAdmin = create<AdminState>()(
         set((st) => ({
           bookings: st.bookings.map((b) => (b.id === id ? { ...b, status, note: note ?? b.note } : b)),
         })),
-      resetAll: () => set(buildSeed()),
+      resetAll: () => set({ pickupPoints: [], vehicles: [], schedules: [], bookings: [] }),
     }),
     {
       name: "pyu-admin-v3",
