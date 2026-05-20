@@ -24,7 +24,13 @@ const toolMeta: Record<Tool, { label: string; icon: typeof Armchair; cls: string
   door: { label: "Pintu", icon: DoorOpen, cls: "bg-amber-400 text-amber-950" },
 };
 
-async function fileToDataUrl(file: File, maxDim = 1200): Promise<string> {
+// Canvas tetap 3:2 landscape. Apapun rasio foto, gambar di-"contain"
+// dengan letterbox putih → ukuran & posisi marker selalu konsisten.
+const CANVAS_W = 1200;
+const CANVAS_H = 800;
+const CANVAS_ASPECT = CANVAS_W / CANVAS_H;
+
+async function fitImageToCanvas(file: File): Promise<string> {
   const dataUrl = await new Promise<string>((res, rej) => {
     const fr = new FileReader();
     fr.onload = () => res(fr.result as string);
@@ -37,13 +43,18 @@ async function fileToDataUrl(file: File, maxDim = 1200): Promise<string> {
     i.onerror = rej;
     i.src = dataUrl;
   });
-  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+  const scale = Math.min(CANVAS_W / img.width, CANVAS_H / img.height);
   const w = Math.round(img.width * scale);
   const h = Math.round(img.height * scale);
+  const dx = Math.round((CANVAS_W - w) / 2);
+  const dy = Math.round((CANVAS_H - h) / 2);
   const cv = document.createElement("canvas");
-  cv.width = w;
-  cv.height = h;
-  cv.getContext("2d")!.drawImage(img, 0, 0, w, h);
+  cv.width = CANVAS_W;
+  cv.height = CANVAS_H;
+  const ctx = cv.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  ctx.drawImage(img, dx, dy, w, h);
   return cv.toDataURL("image/jpeg", 0.82);
 }
 
