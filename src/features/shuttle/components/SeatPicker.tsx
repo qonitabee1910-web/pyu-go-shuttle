@@ -115,9 +115,9 @@ export function SeatPicker({
 
       {/* Legend */}
       <div className="mt-4 flex flex-wrap justify-center gap-3 text-xs">
-        <LegendDot color="bg-primary-soft border-primary-soft" label="Tersedia" />
-        <LegendDot color="bg-primary border-primary" label="Dipilih" />
-        <LegendDot color="bg-destructive/15 border-destructive/30" label="Terisi" />
+        <LegendDot color="bg-seat-available border-seat-available-foreground/50" label="Tersedia" />
+        <LegendDot color="bg-seat-selected border-seat-selected" label="Dipilih" />
+        <LegendDot color="bg-seat-booked border-seat-booked-foreground/50" label="Terisi" />
       </div>
     </div>
   );
