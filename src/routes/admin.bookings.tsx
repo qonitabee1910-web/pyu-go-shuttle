@@ -1,17 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useAdmin, formatRupiah, type AdminBooking, type BookingStatus } from "@/store/admin";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useAdmin } from "@/features/admin/store/admin";
+import { formatRupiah } from "@/shared/utils/utils";
+import type { AdminBooking, BookingStatus } from "@/features/admin/store/admin";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/shared/components/ui/sheet";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { StatusBadge } from "@/components/admin/StatusBadge";
-import { SeatImageMap } from "@/components/admin/SeatImageMap";
+import { StatusBadge } from "@/features/admin/components/StatusBadge";
+import { SeatImageMap } from "@/features/admin/components/SeatImageMap";
 import { toast } from "sonner";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "@/shared/components/ui/separator";
 
 export const Route = createFileRoute("/admin/bookings")({
   component: BookingsPage,
@@ -166,10 +168,10 @@ function BookingsPage() {
                   )}
                   <Separator />
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" disabled={selected.status === "confirmed"} onClick={() => updateStatus(selected.id, "confirmed")}>Confirm</Button>
-                    <Button size="sm" variant="secondary" disabled={selected.status === "boarded"} onClick={() => updateStatus(selected.id, "boarded")}>Mark boarded</Button>
+                    <Button size="sm" disabled={selected.status === "paid"} onClick={() => updateStatus(selected.id, "paid")}>Confirm Paid</Button>
+                    <Button size="sm" variant="secondary" disabled={selected.status === "boarded"} onClick={() => updateStatus(selected.id, "boarded")}>Mark Boarded</Button>
+                    <Button size="sm" disabled={selected.status === "completed"} onClick={() => updateStatus(selected.id, "completed")}>Complete</Button>
                     <Button size="sm" variant="outline" disabled={selected.status === "cancelled"} onClick={() => updateStatus(selected.id, "cancelled")}>Cancel</Button>
-                    <Button size="sm" variant="destructive" disabled={selected.status === "refunded"} onClick={() => updateStatus(selected.id, "refunded")}>Refund</Button>
                   </div>
                 </div>
               </>

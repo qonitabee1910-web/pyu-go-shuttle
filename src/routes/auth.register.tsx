@@ -5,6 +5,7 @@ import { User, Mail, Phone, Lock } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 import { supabase } from "@/integrations/supabase/client";
+import { handleError } from "@/shared/utils/error-handler";
 
 export const Route = createFileRoute("/auth/register")({
   head: () => ({ meta: [{ title: "Daftar — PYU-GO" }] }),
@@ -21,22 +22,51 @@ function RegisterPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: { full_name: fullName, phone },
-      },
-    });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
+    
+    // Basic client-side validation
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+    if (password.length < 8) {
+      toast.error("Kata sandi minimal 8 karakter");
       return;
     }
-    toast.success("Akun dibuat! Silakan masuk.");
-    nav({ to: "/" });
+
+    if (!(hasUpperCase && hasLowerCase && hasNumber && hasSymbol)) {
+      toast.error("Kata sandi harus mengandung huruf besar, kecil, angka, dan simbol");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error, data } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: { 
+            full_name: fullName, 
+            phone_number: phone
+          },
+        },
+      });
+      
+      if (error) throw error;
+      
+      if (data?.user && data.session) {
+         toast.success("Berhasil mendaftar!");
+         nav({ to: "/" });
+      } else {
+         toast.success("Akun dibuat! Silakan cek email untuk konfirmasi.");
+         nav({ to: "/auth/login" });
+      }
+    } catch (err: any) {
+      handleError(err, "Registration");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -52,7 +82,17 @@ function RegisterPage() {
           <Field icon={<User className="h-4 w-4" />} placeholder="Nama lengkap" value={fullName} onChange={(e) => setFullName(e.target.value)} />
           <Field icon={<Mail className="h-4 w-4" />} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <Field icon={<Phone className="h-4 w-4" />} placeholder="Nomor HP" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          <Field icon={<Lock className="h-4 w-4" />} placeholder="Kata sandi (min 6)" type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} />
+          <Field 
+            icon={<Lock className="h-4 w-4" />} 
+            placeholder="Kata sandi (min 8 karakter, A-z, 0-9, !@#)" 
+            type="password" 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+            minLength={8} 
+          />
+          <p className="px-1 text-[10px] text-muted-foreground leading-tight">
+            Gunakan minimal 8 karakter dengan kombinasi huruf besar, kecil, angka, dan simbol untuk keamanan maksimal.
+          </p>
           <label className="flex items-start gap-2 text-xs text-muted-foreground">
             <input type="checkbox" required className="mt-0.5 accent-primary" />
             Saya menyetujui Syarat & Ketentuan dan Kebijakan Privasi PYU-GO.

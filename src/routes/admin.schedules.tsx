@@ -1,18 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
-import { useAdmin, formatRupiah, type AdminSchedule } from "@/store/admin";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { useAdmin } from "@/features/admin/store/admin";
+import type { AdminSchedule } from "@/features/admin/store/admin";
+import { formatRupiah } from "@/shared/utils/utils";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import { Label } from "@/shared/components/ui/label";
+import { Switch } from "@/shared/components/ui/switch";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/shared/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/shared/components/ui/badge";
 
 export const Route = createFileRoute("/admin/schedules")({
   component: SchedulesPage,
@@ -36,7 +38,7 @@ function SchedulesPage() {
   }, [schedules, pickupFilter, vehicleFilter]);
 
   const bookedSeats = (scheduleId: string) =>
-    bookings.filter((b) => b.scheduleId === scheduleId && (b.status === "confirmed" || b.status === "boarded" || b.status === "pending"))
+    bookings.filter((b) => b.scheduleId === scheduleId && (b.status === "paid" || b.status === "boarded" || b.status === "pending"))
       .reduce((s, b) => s + b.seats.length, 0);
 
   const seatsTotal = (vehicleId: string) => {

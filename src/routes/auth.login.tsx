@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { handleError } from "@/shared/utils/error-handler";
 
 export const Route = createFileRoute("/auth/login")({
   head: () => ({ meta: [{ title: "Masuk — PYU-GO" }] }),
@@ -18,32 +19,38 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const nav = useNavigate();
+  const search = Route.useSearch();
+  const redirect = (search as any).redirect || "/";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      toast.success("Berhasil masuk");
+      nav({ to: redirect });
+    } catch (err: any) {
+      handleError(err, "Login");
+    } finally {
+      setLoading(false);
     }
-    toast.success("Berhasil masuk");
-    nav({ to: "/" });
   };
 
   const google = async () => {
     setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) throw result.error;
+      if (result.redirected) return;
+      nav({ to: "/" });
+    } catch (err: any) {
+      handleError(err, "OAuth");
+    } finally {
       setLoading(false);
-      toast.error(result.error.message);
-      return;
     }
-    if (result.redirected) return;
-    nav({ to: "/" });
   };
 
   return (

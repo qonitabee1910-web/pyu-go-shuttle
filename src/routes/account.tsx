@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Bell, HelpCircle, Settings, LogOut, Shield, Loader2 } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-import { useAuth } from "@/hooks/use-auth";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { useAuth } from "@/shared/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 

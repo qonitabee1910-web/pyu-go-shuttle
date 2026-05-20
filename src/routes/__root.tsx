@@ -10,7 +10,8 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BottomNav } from "@/components/BottomNav";
+import { Loader2 } from "lucide-react";
+import { BottomNav } from "@/shared/components/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
@@ -94,28 +95,52 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const nav = useNavigate();
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
-    const isPublic = PUBLIC_PREFIXES.some((p) => loc.pathname.startsWith(p)) || loc.pathname === "/";
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      router.invalidate();
-      if (!session && !isPublic) {
-        nav({ to: "/auth/login" });
-      }
-    });
-    supabase.auth.getSession().then(({ data }) => {
+    let mounted = true;
+
+    async function checkSession() {
+      const { data } = await supabase.auth.getSession();
+      if (!mounted) return;
+      
+      setSession(data.session);
+      const isPublic = PUBLIC_PREFIXES.some((p) => loc.pathname.startsWith(p)) || loc.pathname === "/";
+      
       if (!data.session && !isPublic) {
-        nav({ to: "/auth/login" });
+        nav({ to: "/auth/login", search: { redirect: loc.pathname } });
       }
       setReady(true);
-    });
-    return () => subscription.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loc.pathname]);
+    }
 
-  if (!ready) return null;
+    checkSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      router.invalidate();
+      
+      const isPublic = PUBLIC_PREFIXES.some((p) => loc.pathname.startsWith(p)) || loc.pathname === "/";
+      if (!newSession && !isPublic) {
+        nav({ to: "/auth/login", search: { redirect: loc.pathname } });
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [loc.pathname, nav, router]);
+
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
   return <>{children}</>;
 }
 

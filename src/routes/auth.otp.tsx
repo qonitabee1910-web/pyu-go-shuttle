@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/shared/components/PageHeader";
 
 export const Route = createFileRoute("/auth/otp")({
   head: () => ({ meta: [{ title: "Verifikasi OTP — PYU-GO" }] }),

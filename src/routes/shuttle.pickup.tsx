@@ -3,14 +3,14 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Search, Clock, Navigation, Ruler, ChevronRight, Loader2 } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-import { BookingStepper } from "@/components/BookingStepper";
-import { MapView } from "@/components/MapView";
-import { KNO_AIRPORT, type PickupPoint } from "@/lib/mock-data";
-import { useBooking } from "@/store/booking";
-import { useOsrmRoute } from "@/hooks/use-osrm-route";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { BookingStepper } from "@/features/shuttle/components/BookingStepper";
+import { MapView } from "@/shared/components/MapView";
+import { KNO_AIRPORT, type PickupPoint } from "@/shared/types/mock-data";
+import { useBooking } from "@/features/booking/store/booking";
+import { useOsrmRoute } from "@/shared/hooks/use-osrm-route";
 import { useServerFn } from "@tanstack/react-start";
-import { listPickupPoints } from "@/lib/shuttle.functions";
+import { listPickupPoints } from "@/features/shuttle/services/shuttle.functions";
 
 export const Route = createFileRoute("/shuttle/pickup")({
   head: () => ({ meta: [{ title: "Pilih Titik Jemput — PYU-GO" }] }),

@@ -1,17 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/shared/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
+} from "@/shared/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -27,7 +27,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/shared/components/ui/table";
 import { toast } from "sonner";
 import {
   Activity,
@@ -44,11 +44,9 @@ import {
   TIER_LABEL,
   TYPE_LABEL,
   countSeatsInMap,
-  formatRupiah,
-  type VehicleStatus,
-  type VehicleTemplate,
-  type AdminSchedule,
-} from "@/store/admin";
+} from "@/features/admin/store/admin";
+import type { VehicleStatus, VehicleTemplate, AdminSchedule } from "@/features/admin/store/admin";
+import { formatRupiah } from "@/shared/utils/utils";
 
 export const Route = createFileRoute("/admin/operations")({
   head: () => ({ meta: [{ title: "Operations — PYU-GO Admin" }] }),
@@ -79,7 +77,7 @@ function OperationsPage() {
   const scheduleSeats = useMemo(() => {
     const map = new Map<string, number>();
     bookings.forEach((b) => {
-      if (b.status === "confirmed" || b.status === "boarded") {
+      if (b.status === "paid" || b.status === "boarded") {
         map.set(b.scheduleId, (map.get(b.scheduleId) ?? 0) + b.seats.length);
       }
     });
@@ -473,5 +471,5 @@ function Kpi({
   );
 }
 
-// satisfy TS unused-import elimination
-export type _OpsTypes = AdminSchedule;
+import { StatusBadge } from "@/features/admin/components/StatusBadge";
+import type { BookingStatus } from "@/features/admin/store/admin";

@@ -1,16 +1,19 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-import { BookingStepper } from "@/components/BookingStepper";
-import { useBooking } from "@/store/booking";
-import { formatRupiah } from "@/lib/mock-data";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { BookingStepper } from "@/features/shuttle/components/BookingStepper";
+import { useBooking } from "@/features/booking/store/booking";
+import { formatRupiah } from "@/shared/utils/utils";
 import { toast } from "sonner";
-import { getScheduleSeats } from "@/lib/shuttle.functions";
-import { useSeatAvailability } from "@/hooks/use-seat-availability";
+import { getScheduleSeats } from "@/features/shuttle/services/shuttle.functions";
+import { useSeatAvailability } from "@/features/shuttle/hooks/use-seat-availability";
+import { SeatPicker } from "@/features/shuttle/components/SeatPicker";
+
+import { holdSeats } from "@/features/shuttle/services/shuttle.functions";
 
 export const Route = createFileRoute("/shuttle/seats")({
   head: () => ({ meta: [{ title: "Pilih Kursi — PYU-GO" }] }),
@@ -22,8 +25,11 @@ const MAX_SELECT = 4;
 function SeatsPage() {
   const { schedule, selectedSeats, selectedSeatIds, toggleSeat, pickup } = useBooking();
   const nav = useNavigate();
+  const [isHolding, setIsHolding] = useState(false);
 
   const fetchSeats = useServerFn(getScheduleSeats);
+  const holdSeatsFn = useServerFn(holdSeats);
+  
   const { data, isLoading } = useQuery({
     queryKey: ["schedule-seats", schedule?.id],
     queryFn: () => fetchSeats({ data: { scheduleId: schedule!.id } }),
@@ -35,10 +41,32 @@ function SeatsPage() {
   if (!schedule) return <Navigate to="/shuttle/schedule" />;
 
   const seats = data?.seats ?? [];
+  const bookedSeatNos = useMemo(() => {
+    const now = new Date();
+    return seats
+      .filter((s: any) => {
+        if (s.status === "booked") return true;
+        if (s.status === "held") {
+          // If held by others (not in our current selection) and not expired
+          if (!selectedSeatIds.includes(s.id)) {
+             return s.hold_until && new Date(s.hold_until) > now;
+          }
+        }
+        return false;
+      })
+      .map((s: any) => s.seat_no);
+  }, [seats, selectedSeatIds]);
+  
   const total = selectedSeats.length * schedule.price;
 
-  const handleToggle = (seatId: string, seatNo: string, status: string) => {
-    if (status !== "available" && !selectedSeats.includes(seatNo)) {
+  const handleToggle = (seatNo: string) => {
+    const seat = seats.find((s: any) => s.seat_no === seatNo);
+    if (!seat) return;
+
+    const isBooked = seat.status === "booked";
+    const isHeldByOther = seat.status === "held" && !selectedSeatIds.includes(seat.id) && seat.hold_until && new Date(seat.hold_until) > new Date();
+
+    if ((isBooked || isHeldByOther) && !selectedSeats.includes(seatNo)) {
       toast.info("Kursi tidak tersedia");
       return;
     }
@@ -46,10 +74,20 @@ function SeatsPage() {
       toast.info(`Maksimal ${MAX_SELECT} kursi per pemesanan.`);
       return;
     }
-    toggleSeat(seatNo, seatId);
+    toggleSeat(seatNo, seat.id);
   };
 
-  const cols = useMemo(() => (schedule.seatsTotal >= 10 ? 4 : 2), [schedule.seatsTotal]);
+  const handleContinue = async () => {
+    try {
+      setIsHolding(true);
+      await holdSeatsFn({ data: { scheduleId: schedule.id, seatIds: selectedSeatIds } });
+      nav({ to: "/shuttle/passenger" });
+    } catch (err: any) {
+      toast.error(err.message || "Gagal mengunci kursi. Silakan coba lagi.");
+    } finally {
+      setIsHolding(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-secondary/40 pb-32">
@@ -62,35 +100,13 @@ function SeatsPage() {
             <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memuat kursi...
           </div>
         ) : (
-          <div className="rounded-3xl bg-card p-5 shadow-soft">
-            <div className="mb-3 flex justify-center">
-              <div className="rounded-full bg-muted px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Driver
-              </div>
-            </div>
-            <div className="mx-auto grid gap-2.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
-              {seats.map((s: any) => {
-                const isSelected = selectedSeatIds.includes(s.id);
-                const isTaken = s.status !== "available" && !isSelected;
-                return (
-                  <button key={s.id} onClick={() => handleToggle(s.id, s.seat_no, s.status)}
-                    disabled={isTaken}
-                    className={`relative aspect-square rounded-2xl border-2 text-xs font-bold transition ${
-                      isSelected ? "border-primary bg-primary text-primary-foreground shadow-card" :
-                      isTaken ? "border-muted bg-muted text-muted-foreground cursor-not-allowed" :
-                      "border-primary/40 bg-background text-foreground hover:border-primary"
-                    }`}>
-                    {s.seat_no}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-4 flex flex-wrap justify-center gap-3 text-xs">
-              <Legend className="border-primary/40 bg-background text-foreground" label="Tersedia" />
-              <Legend className="border-primary bg-primary text-primary-foreground" label="Dipilih" />
-              <Legend className="border-muted bg-muted text-muted-foreground" label="Terisi" />
-            </div>
-          </div>
+          <SeatPicker
+            vehicle={schedule.vehicleType}
+            booked={bookedSeatNos}
+            selected={selectedSeats}
+            onToggle={handleToggle}
+            maxSelect={MAX_SELECT}
+          />
         )}
       </div>
 
@@ -99,20 +115,15 @@ function SeatsPage() {
           <span className="text-muted-foreground">{selectedSeats.length} kursi dipilih</span>
           <span className="text-base font-extrabold text-primary">{formatRupiah(total)}</span>
         </div>
-        <button onClick={() => nav({ to: "/shuttle/passenger" })} disabled={selectedSeats.length === 0}
-          className="w-full rounded-full bg-primary py-3.5 text-sm font-bold text-primary-foreground shadow-card disabled:opacity-50">
+        <button 
+          onClick={handleContinue} 
+          disabled={selectedSeats.length === 0 || isHolding}
+          className="w-full flex items-center justify-center rounded-full bg-primary py-3.5 text-sm font-bold text-primary-foreground shadow-card disabled:opacity-50"
+        >
+          {isHolding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Lanjut Data Penumpang
         </button>
       </motion.div>
-    </div>
-  );
-}
-
-function Legend({ className, label }: { className: string; label: string }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className={`h-4 w-4 rounded-md border-2 ${className}`} />
-      <span className="text-muted-foreground">{label}</span>
     </div>
   );
 }

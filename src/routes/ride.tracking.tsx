@@ -2,8 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Phone, MessageCircle, Star, Car, X } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-import { MapView } from "@/components/MapView";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { MapView } from "@/shared/components/MapView";
 
 export const Route = createFileRoute("/ride/tracking")({
   head: () => ({ meta: [{ title: "Driver dalam perjalanan — PYU-GO" }] }),

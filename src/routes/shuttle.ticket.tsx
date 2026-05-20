@@ -6,10 +6,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
 import { Calendar, Clock, MapPin, User, Bus, Share2, Navigation, Download, Loader2 } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-import { useBooking } from "@/store/booking";
-import { KNO_AIRPORT, formatRupiah } from "@/lib/mock-data";
-import { getBooking } from "@/lib/bookings.functions";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { useBooking } from "@/features/booking/store/booking";
+import { formatRupiah } from "@/shared/utils/utils";
+import { KNO_AIRPORT } from "@/shared/types/mock-data";
+import { getBooking } from "@/features/booking/services/bookings.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/shuttle/ticket")({

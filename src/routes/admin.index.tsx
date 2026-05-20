@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAdmin, formatRupiah } from "@/store/admin";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { useAdmin } from "@/features/admin/store/admin";
+import { formatRupiah } from "@/shared/utils/utils";
 import { Calendar, Ticket, TrendingUp, Users } from "lucide-react";
-import { StatusBadge } from "@/components/admin/StatusBadge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { StatusBadge } from "@/features/admin/components/StatusBadge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 
 export const Route = createFileRoute("/admin/")({
   component: Dashboard,
@@ -15,9 +16,9 @@ function Dashboard() {
 
   const stats = useMemo(() => {
     const today = new Date().toDateString();
-    const todays = bookings.filter((b) => new Date(b.createdAt).toDateString() === today);
-    const revenue = bookings.filter((b) => b.status !== "cancelled" && b.status !== "refunded").reduce((s, b) => s + b.amount, 0);
-    const seatsBooked = bookings.filter((b) => b.status === "confirmed" || b.status === "boarded").reduce((s, b) => s + b.seats.length, 0);
+    const todays = bookings.filter((b) => b.status === "paid" && new Date(b.createdAt).toDateString() === today);
+    const revenue = bookings.filter((b) => b.status !== "cancelled").reduce((s, b) => s + b.amount, 0);
+    const seatsBooked = bookings.filter((b) => b.status === "paid" || b.status === "boarded").reduce((s, b) => s + b.seats.length, 0);
     const seatsTotal = schedules.reduce((s, sc) => {
       const v = vehicles.find((vv) => vv.id === sc.vehicleId);
       const count = (v?.seatMap ?? []).filter((m) => m.kind === "seat").length;

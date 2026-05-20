@@ -3,12 +3,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Phone, MessageCircle, Star, Bus, MapPin, Gauge, Route as RouteIcon, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/PageHeader";
-import { MapView } from "@/components/MapView";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { MapView } from "@/shared/components/MapView";
 
-import { useBooking } from "@/store/booking";
-import { KNO_AIRPORT } from "@/lib/mock-data";
-import { useOsrmRoute } from "@/hooks/use-osrm-route";
+import { useBooking } from "@/features/booking/store/booking";
+import { KNO_AIRPORT } from "@/shared/types/mock-data";
+import { useOsrmRoute } from "@/shared/hooks/use-osrm-route";
+import { useVehicleTracking } from "@/features/ride/hooks/use-vehicle-tracking";
 
 export const Route = createFileRoute("/shuttle/tracking")({
   head: () => ({ meta: [{ title: "Lacak Shuttle — PYU-GO" }] }),
@@ -27,24 +28,11 @@ const haversineKm = (a: LatLng, b: LatLng) => {
   return 2 * R * Math.asin(Math.sqrt(x));
 };
 
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const lerpPos = (a: LatLng, b: LatLng, t: number): LatLng => [lerp(a[0], b[0], t), lerp(a[1], b[1], t)];
-
 // Phase boundaries (in normalized progress 0..1)
 const P_PICKUP = 0.4;
 const P_BOARD_END = 0.45;
-const PHASES = ["scheduled", "to_pickup", "boarding", "to_airport", "arrived"] as const;
-type Phase = (typeof PHASES)[number];
 
-const phaseOf = (p: number): Phase => {
-  if (p <= 0) return "scheduled";
-  if (p < P_PICKUP) return "to_pickup";
-  if (p < P_BOARD_END) return "boarding";
-  if (p < 1) return "to_airport";
-  return "arrived";
-};
-
-const PHASE_TOAST: Record<Phase, string | null> = {
+const PHASE_TOAST: Record<string, string | null> = {
   scheduled: null,
   to_pickup: "Armada dalam perjalanan menuju titik jemput",
   boarding: "Armada tiba di titik jemput. Silakan naik.",
@@ -53,7 +41,7 @@ const PHASE_TOAST: Record<Phase, string | null> = {
 };
 
 const PHASE_META: Record<
-  Phase,
+  string,
   { label: string; tone: string; dot: string }
 > = {
   scheduled: { label: "Dijadwalkan", tone: "bg-muted text-foreground", dot: "bg-muted-foreground" },
@@ -63,20 +51,24 @@ const PHASE_META: Record<
   arrived: { label: "Tiba di Bandara KNO", tone: "bg-success/15 text-success", dot: "bg-success" },
 };
 
-const DURATION_SEC = 180; // total simulasi
-
 function TrackingPage() {
   const { pickup, schedule } = useBooking();
-  const [progress, setProgress] = useState(0);
-  const [speed, setSpeed] = useState(42);
-  const [now, setNow] = useState(Date.now());
-  const lastPhase = useRef<Phase>("scheduled");
+  const lastPhase = useRef<string>("scheduled");
+
+  // REALTIME TRACKING
+  const { location, error: trackingError } = useVehicleTracking(schedule?.vehicleId);
 
   // Driver start: ~0.02deg offset from pickup (simulate ~2km away).
   const driverStart = useMemo<LatLng | null>(() => {
     if (!pickup) return null;
     return [pickup.lat - 0.018, pickup.lng - 0.014];
   }, [pickup]);
+
+  // Current position from realtime tracking or fallback to driverStart
+  const currentPos = useMemo<LatLng>(() => {
+    if (location) return [location.lat, location.lng];
+    return driverStart || [0, 0];
+  }, [location, driverStart]);
 
   // Real road route: driver→pickup and pickup→KNO
   const { data: legToPickup } = useOsrmRoute(
@@ -88,103 +80,53 @@ function TrackingPage() {
     { lat: KNO_AIRPORT.lat, lng: KNO_AIRPORT.lng },
   );
 
-  // rAF loop for smooth progress
-  useEffect(() => {
-    let raf = 0;
-    let last = performance.now();
-    const tick = (t: number) => {
-      const dt = (t - last) / 1000;
-      last = t;
-      setProgress((p) => Math.min(1, p + dt / DURATION_SEC));
-      setNow(Date.now());
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
+  const pickupPos: LatLng = [pickup?.lat ?? 0, pickup?.lng ?? 0];
+  const airportPos: LatLng = [KNO_AIRPORT.lat, KNO_AIRPORT.lng];
 
-  // Speed jitter every 2.5s
-  useEffect(() => {
-    const id = setInterval(() => {
-      const base = 40 + Math.sin(Date.now() / 6000) * 8;
-      setSpeed(Math.round(base + (Math.random() - 0.5) * 8));
-    }, 2500);
-    return () => clearInterval(id);
-  }, []);
+  // Determine phase based on location
+  const phase = useMemo(() => {
+    if (!location) return "scheduled";
+    const distToPickup = haversineKm([location.lat, location.lng], pickupPos);
+    const distToAirport = haversineKm([location.lat, location.lng], airportPos);
+    
+    if (distToAirport < 0.2) return "arrived";
+    if (distToPickup < 0.1) return "boarding";
+    
+    // If it's closer to airport than pickup, assume it's to_airport
+    const pickupToAirport = haversineKm(pickupPos, airportPos);
+    if (distToAirport < pickupToAirport * 0.8) return "to_airport";
+    
+    return "to_pickup";
+  }, [location, pickupPos, airportPos]);
 
   // Phase transition toasts
   useEffect(() => {
-    const ph = phaseOf(progress);
-    if (ph !== lastPhase.current) {
-      lastPhase.current = ph;
-      const msg = PHASE_TOAST[ph];
+    if (phase !== lastPhase.current) {
+      lastPhase.current = phase;
+      const msg = PHASE_TOAST[phase];
       if (msg) toast.success(msg);
     }
-  }, [progress]);
+  }, [phase]);
 
-  if (!pickup || !schedule || !driverStart) return <Navigate to="/bookings" />;
+  if (!pickup || !schedule) return <Navigate to="/bookings" />;
 
-  const pickupPos: LatLng = [pickup.lat, pickup.lng];
-  const airportPos: LatLng = [KNO_AIRPORT.lat, KNO_AIRPORT.lng];
+  const speed = location?.speed ?? 0;
+  const remainingKm = haversineKm(currentPos, phase === "to_pickup" ? pickupPos : airportPos);
 
-  const phase = phaseOf(progress);
-
-  // Current vehicle position depending on phase
-  let currentPos: LatLng;
-  if (phase === "scheduled" || phase === "to_pickup") {
-    const sub = phase === "scheduled" ? 0 : progress / P_PICKUP;
-    currentPos = lerpPos(driverStart, pickupPos, sub);
-  } else if (phase === "boarding") {
-    currentPos = pickupPos;
-  } else if (phase === "to_airport") {
-    const sub = (progress - P_BOARD_END) / (1 - P_BOARD_END);
-    currentPos = lerpPos(pickupPos, airportPos, sub);
-  } else {
-    currentPos = airportPos;
-  }
-
-  // Distances — prefer real road distance from OSRM when available
-  const pickupToAirportKm = legToAirport?.distanceKm ?? haversineKm(pickupPos, airportPos);
-  const driverToPickupKm = legToPickup?.distanceKm ?? haversineKm(driverStart, pickupPos);
-  const toPickupRatio =
-    phase === "to_pickup"
-      ? Math.max(0, Math.min(1, 1 - progress / P_PICKUP))
-      : 1;
-  const toAirportRatio =
-    phase === "to_airport"
-      ? Math.max(0, Math.min(1, 1 - (progress - P_BOARD_END) / (1 - P_BOARD_END)))
-      : 1;
-
-  const remainingKm =
-    phase === "to_pickup" || phase === "scheduled"
-      ? driverToPickupKm * toPickupRatio + pickupToAirportKm
-      : phase === "boarding"
-        ? pickupToAirportKm
-        : phase === "to_airport"
-          ? pickupToAirportKm * toAirportRatio
-          : 0;
-
-  // ETA from remaining distance & current speed (more "alive" than simulation timer)
-  const etaSec =
-    phase === "arrived"
-      ? 0
-      : Math.max(15, Math.round((remainingKm / Math.max(15, speed)) * 3600));
+  // ETA from remaining distance & current speed
+  const effectiveSpeed = Math.max(20, speed); // fallback min speed for ETA
+  const etaSec = phase === "arrived" ? 0 : Math.round((remainingKm / effectiveSpeed) * 3600);
   const etaMin = Math.floor(etaSec / 60);
   const etaRemSec = etaSec % 60;
-  const arrivalTime = new Date(now + etaSec * 1000);
+  const arrivalTime = new Date(Date.now() + etaSec * 1000);
 
-  // Full route drawn on the map — follow roads when OSRM is available
+  // Full route drawn on the map
   const fullRoute: LatLng[] = [
-    ...(legToPickup?.path ?? [driverStart, pickupPos]),
+    ...(legToPickup?.path ?? [driverStart || pickupPos, pickupPos]),
     ...(legToAirport?.path ?? [pickupPos, airportPos]),
   ];
 
-  // Traveled segment — simple progress-based slice along the full route
-  const traveledCount = Math.max(1, Math.round(fullRoute.length * progress));
-  const traveledRoute: LatLng[] =
-    phase === "scheduled" ? [driverStart] : fullRoute.slice(0, traveledCount);
-
-  const phaseHeadline: Record<Phase, string> = {
+  const phaseHeadline: Record<string, string> = {
     scheduled: "Armada dijadwalkan",
     to_pickup: "Armada menuju titik jemput",
     boarding: "Armada tiba di titik jemput",
@@ -192,6 +134,13 @@ function TrackingPage() {
     arrived: "Tiba di Bandara KNO",
   };
   const meta = PHASE_META[phase];
+
+  // Progress estimation for the progress bar
+  const totalDist = (legToPickup?.distanceKm ?? 2) + (legToAirport?.distanceKm ?? 35);
+  const progress = phase === "arrived" ? 1 : 
+                   phase === "to_airport" ? 0.6 + (1 - remainingKm / (legToAirport?.distanceKm ?? 35)) * 0.4 :
+                   phase === "boarding" ? 0.45 :
+                   0.1 + (1 - remainingKm / (legToPickup?.distanceKm ?? 2)) * 0.3;
 
   return (
     <div className="min-h-screen bg-secondary/30 pb-32">
@@ -228,7 +177,6 @@ function TrackingPage() {
             { lat: KNO_AIRPORT.lat, lng: KNO_AIRPORT.lng, label: KNO_AIRPORT.code },
           ]}
           route={fullRoute}
-          traveledRoute={traveledRoute}
           showPlane
           planePos={currentPos}
           vehicleEmoji="🚐"

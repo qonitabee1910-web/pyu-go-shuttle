@@ -1,16 +1,16 @@
 import { createFileRoute, useNavigate, Navigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { Check, Wifi, Snowflake, Sofa, Star, ShieldCheck, Clock } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-import { BookingStepper } from "@/components/BookingStepper";
-import { useBooking } from "@/store/booking";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { BookingStepper } from "@/features/shuttle/components/BookingStepper";
+import { useBooking } from "@/features/booking/store/booking";
+import { formatRupiah } from "@/shared/utils/utils";
 import {
   getSchedulesForPickup,
-  formatRupiah,
   type VehicleTier,
   KNO_AIRPORT,
-} from "@/lib/mock-data";
-import { TIER_LABEL } from "@/store/admin";
+} from "@/shared/types/mock-data";
+import { TIER_LABEL } from "@/features/admin/store/admin";
 
 export const Route = createFileRoute("/shuttle/service")({
   head: () => ({ meta: [{ title: "Pilih Service — PYU-GO" }] }),

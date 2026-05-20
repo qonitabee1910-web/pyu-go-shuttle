@@ -8,21 +8,21 @@ import {
   TIER_LABEL,
   TYPE_LABEL,
   DEFAULT_CAPACITY,
-  type VehicleTemplate,
-  type SeatMarker,
-} from "@/store/admin";
-import type { VehicleType, VehicleTier } from "@/lib/mock-data";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+} from "@/features/admin/store/admin";
+import type { VehicleTemplate, SeatMarker } from "@/features/admin/store/admin";
+import { formatRupiah } from "@/shared/utils/utils";
+import type { VehicleType, VehicleTier } from "@/shared/types/mock-data";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/shared/components/ui/sheet";
 import { Plus, Pencil, Trash2, Image as ImageIcon, Armchair } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { SeatImageEditor } from "@/components/admin/SeatImageEditor";
-import { SeatImageMap } from "@/components/admin/SeatImageMap";
-import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/shared/components/ui/alert-dialog";
+import { SeatImageEditor } from "@/features/admin/components/SeatImageEditor";
+import { SeatImageMap } from "@/features/admin/components/SeatImageMap";
+import { Badge } from "@/shared/components/ui/badge";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/vehicles")({

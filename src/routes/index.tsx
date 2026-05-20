@@ -5,7 +5,8 @@ import logo from "@/assets/logo.png";
 import heroBg from "@/assets/hero-bg.jpg";
 import promo1 from "@/assets/promo-1.jpg";
 import promo2 from "@/assets/promo-2.jpg";
-import { pickupPoints, popularRoutes, formatRupiah, KNO_AIRPORT } from "@/lib/mock-data";
+import { pickupPoints, popularRoutes, KNO_AIRPORT } from "@/shared/types/mock-data";
+import { formatRupiah } from "@/shared/utils/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({

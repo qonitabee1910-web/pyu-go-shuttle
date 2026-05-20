@@ -1,14 +1,14 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AdminSidebar } from "@/components/admin/AdminSidebar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { SidebarProvider, SidebarTrigger } from "@/shared/components/ui/sidebar";
+import { AdminSidebar } from "@/features/admin/components/AdminSidebar";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
 import { LogOut, Loader2 } from "lucide-react";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/shared/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { checkIsAdmin } from "@/lib/admin.functions";
+import { checkIsAdmin } from "@/features/admin/services/admin.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({

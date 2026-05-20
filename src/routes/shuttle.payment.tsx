@@ -1,15 +1,17 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
-import { CreditCard, Wallet, Building2, ShieldCheck, Calendar, Clock, User, MapPin } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-import { BookingStepper } from "@/components/BookingStepper";
-import { useBooking } from "@/store/booking";
-import { formatRupiah, KNO_AIRPORT } from "@/lib/mock-data";
+import { CreditCard, Wallet, Building2, ShieldCheck, Calendar, Clock, User, MapPin, AlertCircle, Loader2 } from "lucide-react";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { BookingStepper } from "@/features/shuttle/components/BookingStepper";
+import { useBooking } from "@/features/booking/store/booking";
+import { formatRupiah } from "@/shared/utils/utils";
+import { KNO_AIRPORT } from "@/shared/types/mock-data";
 import { toast } from "sonner";
-import { createBooking } from "@/lib/bookings.functions";
-import { mockPayBooking } from "@/lib/payments.functions";
+import { createBooking } from "@/features/booking/services/bookings.functions";
+import { mockPayBooking } from "@/features/booking/services/payments.functions";
+import { createXenditInvoice } from "@/features/ride/services/ride.functions";
 
 export const Route = createFileRoute("/shuttle/payment")({
   head: () => ({ meta: [{ title: "Pembayaran — PYU-GO" }] }),
@@ -23,19 +25,43 @@ const methods = [
 ];
 
 function PaymentPage() {
-  const { pickup, schedule, selectedSeats, selectedSeatIds, setBooking, setPayment, date, passengerName, passengerPhone } = useBooking();
+  const { pickup, schedule, selectedSeats, selectedSeatIds, setBooking, setPayment, date, passengerName, passengerPhone, reset } = useBooking();
   const nav = useNavigate();
   const [method, setMethod] = useState("ewallet");
   const [loading, setLoading] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
 
   const doCreate = useServerFn(createBooking);
   const doPay = useServerFn(mockPayBooking);
+  const doXendit = useServerFn(createXenditInvoice);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          toast.error("Waktu pemesanan habis. Silakan pilih kembali.");
+          reset();
+          nav({ to: "/shuttle/pickup" });
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [nav, reset]);
 
   if (!pickup || !schedule || selectedSeats.length === 0) return <Navigate to="/shuttle/pickup" />;
 
   const subtotal = selectedSeats.length * schedule.price;
   const fee = 2500;
   const total = subtotal + fee;
+
+  const fmtTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
 
   const pay = async () => {
     if (!passengerName || !passengerPhone) {
@@ -56,14 +82,28 @@ function PaymentPage() {
       setBooking(booking.bookingId, booking.code);
       setPayment(total, null);
 
-      const result = await doPay({ data: { bookingId: booking.bookingId, method } });
-      if (!result.success) {
-        toast.error("Pembayaran gagal. Coba lagi atau pilih metode lain.");
-        setLoading(false);
-        return;
+      if (method === "ewallet") {
+        const result = await doPay({ data: { bookingId: booking.bookingId, method } });
+        if (!result.success) {
+          toast.error("Pembayaran gagal. Coba lagi atau pilih metode lain.");
+          setLoading(false);
+          return;
+        }
+        toast.success("Pembayaran berhasil");
+        nav({ to: "/shuttle/ticket" });
+      } else {
+        // Real Xendit Integration (VA / QRIS)
+        const { invoiceUrl } = await doXendit({
+          data: {
+            bookingId: booking.bookingId,
+            amount: total,
+            email: "user@example.com", // Should get from auth
+            name: passengerName,
+          },
+        });
+        toast.success("Invoice berhasil dibuat");
+        window.location.href = invoiceUrl;
       }
-      toast.success("Pembayaran berhasil");
-      nav({ to: "/shuttle/ticket" });
     } catch (e: any) {
       toast.error(e?.message ?? "Gagal memproses pembayaran");
       setLoading(false);
@@ -76,6 +116,14 @@ function PaymentPage() {
       <BookingStepper />
 
       <div className="mx-auto max-w-md space-y-3 p-4">
+        <div className="flex items-center justify-between rounded-xl bg-amber-50 px-4 py-2 text-xs font-medium text-amber-800">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-3.5 w-3.5" />
+            Selesaikan pembayaran dalam
+          </div>
+          <div className="font-mono font-bold">{fmtTime(timeLeft)}</div>
+        </div>
+
         <section className="rounded-2xl bg-card p-4 shadow-soft">
           <div className="text-xs font-semibold uppercase text-muted-foreground">Detail Perjalanan</div>
           <div className="mt-2 text-sm font-bold">{pickup.name} → {KNO_AIRPORT.code}</div>
@@ -136,8 +184,19 @@ function PaymentPage() {
       </div>
 
       <motion.div initial={{ y: 80 }} animate={{ y: 0 }} className="fixed bottom-0 left-1/2 z-40 w-full max-w-md -translate-x-1/2 border-t border-border bg-card/95 px-5 py-3 backdrop-blur shadow-float">
-        <button onClick={pay} disabled={loading} className="w-full rounded-full bg-primary py-3.5 text-sm font-bold text-primary-foreground shadow-card disabled:opacity-60">
-          {loading ? "Memproses..." : `Bayar ${formatRupiah(total)}`}
+        <button 
+          onClick={pay} 
+          disabled={loading || timeLeft === 0} 
+          className="w-full flex items-center justify-center rounded-full bg-primary py-3.5 text-sm font-bold text-primary-foreground shadow-card disabled:opacity-60"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Memproses...
+            </>
+          ) : (
+            `Bayar ${formatRupiah(total)}`
+          )}
         </button>
       </motion.div>
     </div>

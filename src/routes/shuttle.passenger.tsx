@@ -2,9 +2,9 @@ import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { User, Phone, Info } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-import { BookingStepper } from "@/components/BookingStepper";
-import { useBooking } from "@/store/booking";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { BookingStepper } from "@/features/shuttle/components/BookingStepper";
+import { useBooking } from "@/features/booking/store/booking";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/shuttle/passenger")({

@@ -11,11 +11,11 @@ import {
   ExternalLink,
   Info,
 } from "lucide-react";
-import { MapView } from "@/components/MapView";
-import { BookingStepper } from "@/components/BookingStepper";
-import { KNO_AIRPORT, pickupPoints } from "@/lib/mock-data";
-import { useBooking } from "@/store/booking";
-import { useOsrmRoute } from "@/hooks/use-osrm-route";
+import { MapView } from "@/shared/components/MapView";
+import { BookingStepper } from "@/features/shuttle/components/BookingStepper";
+import { KNO_AIRPORT, pickupPoints } from "@/shared/types/mock-data";
+import { useBooking } from "@/features/booking/store/booking";
+import { useOsrmRoute } from "@/shared/hooks/use-osrm-route";
 
 export const Route = createFileRoute("/shuttle/pickup/$pointId")({
   head: () => ({ meta: [{ title: "Rute ke KNO — PYU-GO" }] }),

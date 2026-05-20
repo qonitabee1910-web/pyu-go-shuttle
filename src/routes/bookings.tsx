@@ -1,12 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { motion } from "framer-motion";
+import { Ticket, ChevronRight, Plane, Clock, Bus, MapPin, Calendar, Loader2, CheckCircle2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { Ticket, ChevronRight, Plane, Clock, CheckCircle2, Bus, MapPin, Calendar, Loader2 } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-import { formatRupiah, KNO_AIRPORT } from "@/lib/mock-data";
-import { listMyBookings } from "@/lib/bookings.functions";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { formatRupiah, formatDateTime } from "@/shared/utils/utils";
+import { KNO_AIRPORT } from "@/shared/types/mock-data";
+import { listMyBookings } from "@/features/booking/services/bookings.functions";
+import { StatusBadge } from "@/features/admin/components/StatusBadge";
+import type { BookingStatus } from "@/features/admin/store/admin";
 
 export const Route = createFileRoute("/bookings")({
   head: () => ({ meta: [{ title: "Tiket Saya — PYU-GO" }] }),
@@ -20,10 +24,6 @@ const STATUS_LABEL: Record<string, { label: string; wrap: string; icon: any }> =
   completed: { label: "Selesai", wrap: "bg-success/15 text-success", icon: CheckCircle2 },
   cancelled: { label: "Dibatalkan", wrap: "bg-destructive/15 text-destructive", icon: Clock },
 };
-
-function fmtDateTime(iso: string) {
-  return new Date(iso).toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Jakarta" });
-}
 
 function BookingsPage() {
   const [tab, setTab] = useState<string>("Semua");
@@ -79,7 +79,7 @@ function BookingsPage() {
                   <Plane className="h-4 w-4 text-primary" />
                   <div className="text-sm font-bold">{pickup?.name ?? "—"} → {KNO_AIRPORT.code}</div>
                 </div>
-                <div className="text-xs text-muted-foreground">{sched ? fmtDateTime(sched.departure_at) : ""}</div>
+                <div className="text-xs text-muted-foreground">{sched ? formatDateTime(sched.departure_at) : ""}</div>
                 <div className="mt-3 flex items-center justify-between border-t border-dashed border-border pt-2">
                   <span className="text-sm font-extrabold text-primary">{formatRupiah(b.total)}</span>
                   <ChevronRight className={`h-4 w-4 text-muted-foreground transition ${open ? "rotate-90" : ""}`} />
@@ -93,7 +93,7 @@ function BookingsPage() {
                     <div className="mt-2 text-[11px] text-muted-foreground">{b.status === "completed" ? "Tiket sudah digunakan" : "Tunjukkan QR ke driver"}</div>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                    <Info icon={<Calendar className="h-3.5 w-3.5" />} label="Jadwal" value={sched ? fmtDateTime(sched.departure_at) : "—"} />
+                    <Info icon={<Calendar className="h-3.5 w-3.5" />} label="Jadwal" value={sched ? formatDateTime(sched.departure_at) : "—"} />
                     <Info icon={<Bus className="h-3.5 w-3.5" />} label="Kendaraan" value={vehicle ? `${vehicle.name} (${vehicle.plate})` : "—"} />
                     <Info icon={<MapPin className="h-3.5 w-3.5" />} label="Kursi" value={seats.join(", ") || "—"} />
                     <Info icon={<MapPin className="h-3.5 w-3.5" />} label="Jemput" value={pickup?.name ?? "—"} />

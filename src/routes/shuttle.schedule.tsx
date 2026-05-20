@@ -6,11 +6,12 @@ import { motion } from "framer-motion";
 import { format, addDays, isSameDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { ArrowRight, Users, Bus, Loader2 } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-import { BookingStepper } from "@/components/BookingStepper";
-import { formatRupiah, KNO_AIRPORT, type Schedule } from "@/lib/mock-data";
-import { useBooking } from "@/store/booking";
-import { listSchedules } from "@/lib/shuttle.functions";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { BookingStepper } from "@/features/shuttle/components/BookingStepper";
+import { formatRupiah } from "@/shared/utils/utils";
+import { KNO_AIRPORT, type Schedule } from "@/shared/types/mock-data";
+import { useBooking } from "@/features/booking/store/booking";
+import { listSchedules } from "@/features/shuttle/services/shuttle.functions";
 
 export const Route = createFileRoute("/shuttle/schedule")({
   head: () => ({ meta: [{ title: "Pilih Jadwal — PYU-GO" }] }),

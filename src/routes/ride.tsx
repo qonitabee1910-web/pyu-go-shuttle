@@ -2,9 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { MapPin, Navigation, Car, Zap, Crown } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-import { MapView } from "@/components/MapView";
-import { nearbyDrivers, formatRupiah } from "@/lib/mock-data";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { MapView } from "@/shared/components/MapView";
+import { formatRupiah } from "@/shared/utils/utils";
+import { nearbyDrivers } from "@/shared/types/mock-data";
 
 export const Route = createFileRoute("/ride")({
   head: () => ({ meta: [{ title: "Ride Hailing — PYU-GO" }] }),
