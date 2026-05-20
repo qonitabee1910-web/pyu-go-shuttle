@@ -1,11 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Navigation, Car, Zap, Crown } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { MapPin, Navigation, Car, Zap, Crown, Loader2 } from "lucide-react";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { MapView } from "@/shared/components/MapView";
 import { formatRupiah } from "@/shared/utils/utils";
 import { nearbyDrivers } from "@/shared/types/shuttle";
+import { useAuth } from "@/shared/hooks/use-auth";
+import { createRideOrder } from "@/features/ride/services/ride-order.functions";
 
 export const Route = createFileRoute("/ride")({
   head: () => ({ meta: [{ title: "Ride Hailing — PYU-GO" }] }),
@@ -13,19 +18,48 @@ export const Route = createFileRoute("/ride")({
 });
 
 const tiers = [
-  { id: "eco", label: "Economy", icon: Car, eta: "3 mnt", price: 18000, desc: "Hatchback" },
-  { id: "fast", label: "Express", icon: Zap, eta: "2 mnt", price: 25000, desc: "Sedan / MPV" },
-  { id: "vip", label: "VIP", icon: Crown, eta: "5 mnt", price: 45000, desc: "Innova / Premium" },
+  { id: "eco", label: "Economy", icon: Car, eta: 3, price: 18000, desc: "Hatchback" },
+  { id: "fast", label: "Express", icon: Zap, eta: 2, price: 25000, desc: "Sedan / MPV" },
+  { id: "vip", label: "VIP", icon: Crown, eta: 5, price: 45000, desc: "Innova / Premium" },
 ];
 
+// Default pickup near Medan; in production replace with geolocation
+const DEFAULT_PICKUP = { lat: 3.585, lng: 98.679, address: "Lokasi saya saat ini" };
+const DEFAULT_DROPOFF = { lat: 3.642, lng: 98.879, address: "" };
+
 function RidePage() {
-  const [pickup, setPickup] = useState("Lokasi saya saat ini");
+  const [pickup, setPickup] = useState(DEFAULT_PICKUP.address);
   const [dest, setDest] = useState("");
   const [tier, setTier] = useState("eco");
   const nav = useNavigate();
+  const { user } = useAuth();
+  const createOrder = useServerFn(createRideOrder);
 
   const selected = tiers.find((t) => t.id === tier)!;
   const canBook = dest.trim().length > 2;
+
+  const mutation = useMutation({
+    mutationFn: async () => createOrder({
+      data: {
+        pickup: { ...DEFAULT_PICKUP, address: pickup },
+        dropoff: { ...DEFAULT_DROPOFF, address: dest },
+        tier,
+        fare: selected.price,
+        etaMin: selected.eta,
+      },
+    }),
+    onSuccess: ({ id }) => {
+      toast.success("Order dibuat — mencari driver");
+      nav({ to: "/ride/tracking", search: { id } as any });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Gagal membuat order"),
+  });
+
+  const handleBook = () => {
+    if (!user) { nav({ to: "/auth/login", search: { redirect: "/ride" } as any }); return; }
+    if (!canBook) return;
+    mutation.mutate();
+  };
 
   return (
     <div className="min-h-screen bg-secondary/30 pb-24">
@@ -39,7 +73,6 @@ function RidePage() {
           className="h-56 w-full"
         />
 
-        {/* Input card */}
         <div className="-mt-6 mx-2 rounded-2xl bg-card p-4 shadow-float">
           <div className="flex gap-3">
             <div className="flex flex-col items-center pt-2">
@@ -50,26 +83,16 @@ function RidePage() {
             <div className="flex-1 space-y-2">
               <div className="rounded-xl border border-border px-3 py-2">
                 <label className="text-[10px] uppercase text-muted-foreground">Jemput</label>
-                <input
-                  value={pickup}
-                  onChange={(e) => setPickup(e.target.value)}
-                  className="w-full bg-transparent text-sm font-semibold outline-none"
-                />
+                <input value={pickup} onChange={(e) => setPickup(e.target.value)} className="w-full bg-transparent text-sm font-semibold outline-none" />
               </div>
               <div className="rounded-xl border border-primary/40 bg-primary-soft px-3 py-2">
                 <label className="text-[10px] uppercase text-primary">Tujuan</label>
-                <input
-                  value={dest}
-                  onChange={(e) => setDest(e.target.value)}
-                  placeholder="Mau ke mana?"
-                  className="w-full bg-transparent text-sm font-semibold outline-none"
-                />
+                <input value={dest} onChange={(e) => setDest(e.target.value)} placeholder="Mau ke mana?" className="w-full bg-transparent text-sm font-semibold outline-none" />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Tier picker */}
         <div className="mt-4 space-y-2">
           {tiers.map((t) => {
             const Icon = t.icon;
@@ -79,9 +102,7 @@ function RidePage() {
                 key={t.id}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setTier(t.id)}
-                className={`flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-left transition ${
-                  active ? "border-primary bg-primary-soft shadow-card" : "border-border bg-card"
-                }`}
+                className={`flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-left transition ${active ? "border-primary bg-primary-soft shadow-card" : "border-border bg-card"}`}
               >
                 <div className={`grid h-12 w-12 place-items-center rounded-xl ${active ? "bg-primary text-primary-foreground" : "bg-muted text-primary"}`}>
                   <Icon className="h-5 w-5" />
@@ -89,9 +110,7 @@ function RidePage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 text-sm font-bold">
                     {t.label}
-                    <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success">
-                      {t.eta}
-                    </span>
+                    <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success">{t.eta} mnt</span>
                   </div>
                   <div className="text-xs text-muted-foreground">{t.desc}</div>
                 </div>
@@ -101,7 +120,6 @@ function RidePage() {
           })}
         </div>
 
-        {/* Nearby drivers */}
         <div className="mt-5 rounded-2xl bg-card p-4 shadow-soft">
           <div className="mb-2 flex items-center gap-2 text-sm font-bold">
             <Navigation className="h-4 w-4 text-primary" /> {nearbyDrivers.length} driver di dekatmu
@@ -118,17 +136,13 @@ function RidePage() {
         </div>
       </div>
 
-      {/* Sticky CTA */}
-      <motion.div
-        initial={{ y: 80 }}
-        animate={{ y: 0 }}
-        className="fixed bottom-16 left-1/2 z-30 w-full max-w-md -translate-x-1/2 px-4"
-      >
+      <motion.div initial={{ y: 80 }} animate={{ y: 0 }} className="fixed bottom-16 left-1/2 z-30 w-full max-w-md -translate-x-1/2 px-4">
         <button
-          disabled={!canBook}
-          onClick={() => nav({ to: "/ride/tracking" })}
-          className="w-full rounded-full bg-primary py-3.5 text-sm font-bold text-primary-foreground shadow-float transition disabled:opacity-40"
+          disabled={!canBook || mutation.isPending}
+          onClick={handleBook}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-bold text-primary-foreground shadow-float transition disabled:opacity-40"
         >
+          {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
           {canBook ? `Pesan ${selected.label} • ${formatRupiah(selected.price)}` : "Masukkan tujuan dulu"}
         </button>
       </motion.div>
