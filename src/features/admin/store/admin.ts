@@ -106,7 +106,7 @@ export interface AdminSchedule {
   seatQuota?: number; // override kursi yang dijual; default = kapasitas kendaraan
 }
 
-export type BookingStatus = "pending" | "confirmed" | "boarded" | "cancelled" | "refunded";
+export type BookingStatus = "pending" | "confirmed" | "paid" | "completed" | "boarded" | "cancelled" | "refunded";
 
 export interface AdminBooking {
   id: string;
@@ -238,7 +238,7 @@ export const useAdmin = create<AdminState>()(
         set((st) => ({
           bookings: st.bookings.map((b) => (b.id === id ? { ...b, status, note: note ?? b.note } : b)),
         })),
-      resetAll: () => set(buildSeed()),
+      resetAll: () => set({ pickupPoints: [], vehicles: [], schedules: [], bookings: [] }),
     }),
     {
       name: "pyu-admin-v3",

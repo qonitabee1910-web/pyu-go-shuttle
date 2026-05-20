@@ -31,15 +31,26 @@ function LoginPage() {
     const result = loginSchema.safeParse({ email, password });
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
-      result.error.errors.forEach((err) => {
+      result.error.issues.forEach((err: any) => {
         if (err.path[0]) fieldErrors[err.path[0].toString()] = err.message;
       });
       setErrors(fieldErrors);
-      toast.error(result.error.errors[0].message);
+      toast.error(result.error.issues[0].message);
       return;
     }
 
     setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      toast.success("Berhasil masuk");
+      nav({ to: redirect });
+    } catch (err: any) {
+      handleError(err, "Login");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const google = async () => {
     setLoading(true);
