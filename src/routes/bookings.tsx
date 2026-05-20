@@ -30,10 +30,22 @@ function BookingsPage() {
   const [tab, setTab] = useState<string>("Semua");
   const [openId, setOpenId] = useState<string | null>(null);
   const fetchList = useServerFn(listMyBookings);
+  const qc = useQueryClient();
+  const { user } = useAuth();
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["my-bookings"],
     queryFn: () => fetchList(),
   });
+
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase
+      .channel(`bookings:${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "bookings", filter: `user_id=eq.${user.id}` },
+        () => qc.invalidateQueries({ queryKey: ["my-bookings"] }))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user, qc]);
 
   const tabs = ["Semua", "pending", "paid", "completed"];
   const tabLabel = (t: string) => (t === "Semua" ? "Semua" : STATUS_LABEL[t]?.label ?? t);
