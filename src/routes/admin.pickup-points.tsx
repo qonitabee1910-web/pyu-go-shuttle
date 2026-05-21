@@ -1,14 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useAdmin } from "@/features/admin/store/admin";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { adminListPickupPoints, adminUpsertPickupPoint, adminDeletePickupPoint } from "@/features/admin/services/admin.functions";
 import type { PickupPoint } from "@/shared/types/shuttle";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/shared/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/shared/components/ui/dialog";
 import { Label } from "@/shared/components/ui/label";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/shared/components/ui/alert-dialog";
 import { toast } from "sonner";
 
@@ -19,18 +21,56 @@ export const Route = createFileRoute("/admin/pickup-points")({
 const empty: PickupPoint = { id: "", rayon: "Rayon A", name: "", address: "", city: "Medan", distanceKm: 0, etaMin: 0, lat: 3.58, lng: 98.67 };
 
 function PickupPointsPage() {
-  const { pickupPoints, upsertPickup, deletePickup } = useAdmin();
+  const queryClient = useQueryClient();
+  const listFn = useServerFn(adminListPickupPoints);
+  const upsertFn = useServerFn(adminUpsertPickupPoint);
+  const deleteFn = useServerFn(adminDeletePickupPoint);
+
+  const { data: pickupPoints = [], isLoading } = useQuery({
+    queryKey: ["admin-pickup-points"],
+    queryFn: () => listFn(),
+  });
+
+  const upsertMutation = useMutation({
+    mutationFn: (p: any) => upsertFn({ data: p }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-pickup-points"] });
+      setOpen(false);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteFn({ data: { id } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-pickup-points"] });
+    },
+  });
+
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<PickupPoint | null>(null);
   const [open, setOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const s = q.toLowerCase();
-    return pickupPoints.filter((p) => !s || p.name.toLowerCase().includes(s) || p.address.toLowerCase().includes(s) || p.rayon.toLowerCase().includes(s));
+    return pickupPoints.filter((p: any) => !s || p.name.toLowerCase().includes(s) || p.address.toLowerCase().includes(s) || p.rayon.toLowerCase().includes(s));
   }, [pickupPoints, q]);
 
-  const openNew = () => { setEditing({ ...empty, id: "pp-" + Date.now() }); setOpen(true); };
-  const openEdit = (p: PickupPoint) => { setEditing(p); setOpen(true); };
+  const openNew = () => { setEditing({ ...empty }); setOpen(true); };
+  const openEdit = (p: any) => { 
+    setEditing({
+      id: p.id,
+      name: p.name,
+      rayon: p.rayon,
+      address: p.address,
+      city: p.city || "Medan",
+      distanceKm: p.distance_km || 0,
+      etaMin: p.eta_min || 0,
+      lat: p.lat,
+      lng: p.lng,
+      imageUrl: p.image_url
+    }); 
+    setOpen(true); 
+  };
 
   return (
     <div className="space-y-4">
@@ -48,47 +88,66 @@ function PickupPointsPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input className="pl-9" placeholder="Cari nama, alamat, rayon…" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Rayon</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>City</TableHead>
-                  <TableHead>Distance</TableHead>
-                  <TableHead>ETA</TableHead>
-                  <TableHead>Lat/Lng</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.rayon}</TableCell>
-                    <TableCell>
-                      <div className="font-medium">{p.name}</div>
-                      <div className="text-xs text-muted-foreground">{p.address}</div>
-                    </TableCell>
-                    <TableCell>{p.city}</TableCell>
-                    <TableCell>{p.distanceKm} km</TableCell>
-                    <TableCell>{p.etaMin} min</TableCell>
-                    <TableCell className="font-mono text-xs">{p.lat.toFixed(3)}, {p.lng.toFixed(3)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
-                      <DeleteBtn onConfirm={() => { deletePickup(p.id); toast.success("Pickup point dihapus"); }} />
-                    </TableCell>
+          
+          {isLoading ? (
+            <div className="flex h-32 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Rayon</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>City</TableHead>
+                    <TableHead>Distance</TableHead>
+                    <TableHead>ETA</TableHead>
+                    <TableHead>Lat/Lng</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-                {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">Tidak ada data.</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((p: any) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium">{p.rayon}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{p.name}</div>
+                        <div className="text-xs text-muted-foreground">{p.address}</div>
+                      </TableCell>
+                      <TableCell>{p.city}</TableCell>
+                      <TableCell>{p.distance_km} km</TableCell>
+                      <TableCell>{p.eta_min} min</TableCell>
+                      <TableCell className="font-mono text-xs">{Number(p.lat).toFixed(3)}, {Number(p.lng).toFixed(3)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
+                        <DeleteBtn onConfirm={() => { deleteMutation.mutate(p.id); toast.success("Pickup point dihapus"); }} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {filtered.length === 0 && (
+                    <TableRow><TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">Tidak ada data.</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      <PickupDialog open={open} onOpenChange={setOpen} value={editing} onSave={(v) => { upsertPickup(v); toast.success("Tersimpan"); setOpen(false); }} />
+      <PickupDialog 
+        open={open} 
+        onOpenChange={setOpen} 
+        value={editing} 
+        onSave={(v) => { 
+          upsertMutation.mutate({
+            ...v,
+            distance_km: v.distanceKm,
+            eta_min: v.etaMin,
+            image_url: v.imageUrl
+          }); 
+          toast.success("Tersimpan"); 
+        }} 
+        loading={upsertMutation.isPending}
+      />
     </div>
   );
 }
@@ -113,7 +172,7 @@ function DeleteBtn({ onConfirm }: { onConfirm: () => void }) {
   );
 }
 
-function PickupDialog({ open, onOpenChange, value, onSave }: { open: boolean; onOpenChange: (v: boolean) => void; value: PickupPoint | null; onSave: (p: PickupPoint) => void }) {
+function PickupDialog({ open, onOpenChange, value, onSave, loading }: { open: boolean; onOpenChange: (v: boolean) => void; value: PickupPoint | null; onSave: (p: PickupPoint) => void; loading: boolean }) {
   const [v, setV] = useState<PickupPoint>(value ?? empty);
   // reset on open
   useMemoSync(() => setV(value ?? empty), [value]);
@@ -123,9 +182,9 @@ function PickupDialog({ open, onOpenChange, value, onSave }: { open: boolean; on
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{value.name ? "Edit Pickup Point" : "Tambah Pickup Point"}</DialogTitle>
+          <DialogTitle>{value.id ? "Edit Pickup Point" : "Tambah Pickup Point"}</DialogTitle>
           <DialogDescription>
-            {value.name ? `Perbarui informasi untuk ${value.name}.` : "Isi formulir di bawah untuk menambahkan titik penjemputan baru."}
+            {value.id ? `Perbarui informasi untuk ${value.name}.` : "Isi formulir di bawah untuk menambahkan titik penjemputan baru."}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -137,10 +196,13 @@ function PickupDialog({ open, onOpenChange, value, onSave }: { open: boolean; on
           <Field label="ETA (menit)"><Input type="number" value={v.etaMin} onChange={(e) => setV({ ...v, etaMin: +e.target.value })} /></Field>
           <Field label="Latitude"><Input type="number" step="0.0001" value={v.lat} onChange={(e) => setV({ ...v, lat: +e.target.value })} /></Field>
           <Field label="Longitude"><Input type="number" step="0.0001" value={v.lng} onChange={(e) => setV({ ...v, lng: +e.target.value })} /></Field>
+          <Field label="Image URL" full><Input value={v.imageUrl || ""} onChange={(e) => setV({ ...v, imageUrl: e.target.value })} /></Field>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>
-          <Button onClick={() => onSave(v)} disabled={!v.name || !v.address}>Simpan</Button>
+          <Button onClick={() => onSave(v)} disabled={!v.name || !v.address || loading}>
+            {loading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Simpan
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

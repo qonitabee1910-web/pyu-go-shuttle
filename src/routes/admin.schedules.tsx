@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
-import { useAdmin } from "@/features/admin/store/admin";
-import type { AdminSchedule } from "@/features/admin/store/admin";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AdminSchedule, VehicleTemplate } from "@/features/admin/types";
 import { formatRupiah } from "@/shared/utils/utils";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -11,23 +11,109 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/shared/components/ui/dialog";
 import { Label } from "@/shared/components/ui/label";
 import { Switch } from "@/shared/components/ui/switch";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/shared/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Badge } from "@/shared/components/ui/badge";
+import { 
+  adminListSchedules, 
+  adminListVehicles, 
+  adminListPickupPoints, 
+  adminListBookings,
+  adminUpsertSchedule,
+  adminDeleteSchedule 
+} from "@/features/admin/services/admin.functions";
 
 export const Route = createFileRoute("/admin/schedules")({
   component: SchedulesPage,
 });
 
-const empty = (): AdminSchedule => ({ id: "sc-" + Date.now(), pickupId: "", vehicleId: "", departureTime: "08:00", arrivalTime: "09:30", price: 120000, active: true });
+const empty = (): AdminSchedule => ({ 
+  id: "", 
+  pickupId: "", 
+  vehicleId: "", 
+  departureTime: "08:00", 
+  arrivalTime: "09:30", 
+  price: 120000, 
+  active: true 
+});
 
 function SchedulesPage() {
-  const { schedules, pickupPoints, vehicles, bookings, upsertSchedule, deleteSchedule } = useAdmin();
+  const queryClient = useQueryClient();
   const [pickupFilter, setPickupFilter] = useState("all");
   const [vehicleFilter, setVehicleFilter] = useState("all");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<AdminSchedule | null>(null);
+
+  const { data: rawSchedules = [], isLoading: loadingSchedules } = useQuery({
+    queryKey: ["admin", "schedules"],
+    queryFn: () => adminListSchedules(),
+  });
+
+  const { data: vehicles = [], isLoading: loadingVehicles } = useQuery({
+    queryKey: ["admin", "vehicles"],
+    queryFn: () => adminListVehicles(),
+  });
+
+  const { data: pickupPoints = [], isLoading: loadingPickups } = useQuery({
+    queryKey: ["admin", "pickup-points"],
+    queryFn: () => adminListPickupPoints(),
+  });
+
+  const { data: bookings = [], isLoading: loadingBookings } = useQuery({
+    queryKey: ["admin", "bookings"],
+    queryFn: () => adminListBookings(),
+  });
+
+  const upsertMutation = useMutation({
+    mutationFn: (data: AdminSchedule) => {
+      // Convert camelCase to snake_case for DB
+      // Handle time conversion: Use today's date if id is empty, otherwise keep existing date part
+      const now = new Date();
+      const dateStr = now.toISOString().split("T")[0];
+      
+      return adminUpsertSchedule({
+        id: data.id || undefined,
+        pickup_point_id: data.pickupId,
+        vehicle_id: data.vehicleId,
+        departure_at: `${dateStr}T${data.departureTime}:00+07:00`,
+        arrival_at: data.arrivalTime ? `${dateStr}T${data.arrivalTime}:00+07:00` : undefined,
+        price: data.price,
+        active: data.active,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "schedules"] });
+      toast.success("Jadwal tersimpan");
+      setOpen(false);
+    },
+    onError: (err: any) => {
+      toast.error("Gagal menyimpan jadwal: " + err.message);
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => adminDeleteSchedule({ id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "schedules"] });
+      toast.success("Jadwal dihapus");
+    },
+    onError: (err: any) => {
+      toast.error("Gagal menghapus jadwal: " + err.message);
+    }
+  });
+
+  const schedules = useMemo(() => {
+    return rawSchedules.map((s: any): AdminSchedule => ({
+      id: s.id,
+      pickupId: s.pickup_point_id,
+      vehicleId: s.vehicle_id,
+      departureTime: s.departure_at.split("T")[1].substring(0, 5),
+      arrivalTime: s.arrival_at ? s.arrival_at.split("T")[1].substring(0, 5) : "",
+      price: s.price,
+      active: s.active,
+    }));
+  }, [rawSchedules]);
 
   const filtered = useMemo(() => {
     return schedules.filter((s) => {
@@ -38,13 +124,21 @@ function SchedulesPage() {
   }, [schedules, pickupFilter, vehicleFilter]);
 
   const bookedSeats = (scheduleId: string) =>
-    bookings.filter((b) => b.scheduleId === scheduleId && (b.status === "paid" || b.status === "boarded" || b.status === "pending"))
-      .reduce((s, b) => s + b.seats.length, 0);
+    bookings.filter((b: any) => b.schedule_id === scheduleId && (b.status === "paid" || b.status === "boarded" || b.status === "pending"))
+      .reduce((s: number, b: any) => s + (b.seat_bookings?.length || 0), 0);
 
   const seatsTotal = (vehicleId: string) => {
-    const v = vehicles.find((x) => x.id === vehicleId);
-    return (v?.seatMap ?? []).filter((m) => m.kind === "seat").length;
+    const v = vehicles.find((x: any) => x.id === vehicleId);
+    return (v?.seat_layout || []).filter((m: any) => m.kind === "seat").length;
   };
+
+  if (loadingSchedules || loadingVehicles || loadingPickups || loadingBookings) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -63,14 +157,14 @@ function SchedulesPage() {
               <SelectTrigger className="w-[220px]"><SelectValue placeholder="Pickup" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua pickup</SelectItem>
-                {pickupPoints.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                {pickupPoints.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
               <SelectTrigger className="w-[200px]"><SelectValue placeholder="Vehicle" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua kendaraan</SelectItem>
-                {vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                {vehicles.map((v: any) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -90,8 +184,8 @@ function SchedulesPage() {
               </TableHeader>
               <TableBody>
                 {filtered.map((s) => {
-                  const pickup = pickupPoints.find((p) => p.id === s.pickupId);
-                  const veh = vehicles.find((v) => v.id === s.vehicleId);
+                  const pickup = pickupPoints.find((p: any) => p.id === s.pickupId);
+                  const veh = vehicles.find((v: any) => v.id === s.vehicleId);
                   const capacity = seatsTotal(s.vehicleId);
                   const quota = s.seatQuota ?? capacity;
                   const booked = bookedSeats(s.id);
@@ -126,7 +220,7 @@ function SchedulesPage() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => { deleteSchedule(s.id); toast.success("Jadwal dihapus"); }}>Hapus</AlertDialogAction>
+                              <AlertDialogAction onClick={() => deleteMutation.mutate(s.id)}>Hapus</AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -147,20 +241,38 @@ function SchedulesPage() {
         open={open}
         onOpenChange={setOpen}
         value={editing}
-        onSave={(v) => { upsertSchedule(v); toast.success("Jadwal tersimpan"); setOpen(false); }}
+        pickupPoints={pickupPoints}
+        vehicles={vehicles}
+        onSave={(v) => upsertMutation.mutate(v)}
+        isSaving={upsertMutation.isPending}
       />
     </div>
   );
 }
 
-function ScheduleDialog({ open, onOpenChange, value, onSave }: { open: boolean; onOpenChange: (v: boolean) => void; value: AdminSchedule | null; onSave: (s: AdminSchedule) => void }) {
-  const { pickupPoints, vehicles } = useAdmin();
+function ScheduleDialog({ 
+  open, 
+  onOpenChange, 
+  value, 
+  pickupPoints, 
+  vehicles, 
+  onSave,
+  isSaving
+}: { 
+  open: boolean; 
+  onOpenChange: (v: boolean) => void; 
+  value: AdminSchedule | null; 
+  pickupPoints: any[];
+  vehicles: any[];
+  onSave: (s: AdminSchedule) => void;
+  isSaving: boolean;
+}) {
   const [v, setV] = useState<AdminSchedule>(value ?? empty());
   useEffect(() => { if (value) setV(value); }, [value]);
 
   if (!value) return null;
   const vehicle = vehicles.find((x) => x.id === v.vehicleId);
-  const capacity = (vehicle?.seatMap ?? []).filter((m) => m.kind === "seat").length;
+  const capacity = (vehicle?.seat_layout || []).filter((m: any) => m.kind === "seat").length;
   const quotaValue = v.seatQuota ?? capacity;
   const quotaInvalid = capacity > 0 && (quotaValue < 1 || quotaValue > capacity);
 
@@ -232,7 +344,10 @@ function ScheduleDialog({ open, onOpenChange, value, onSave }: { open: boolean; 
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>
-          <Button onClick={() => onSave(v)} disabled={!v.pickupId || !v.vehicleId || quotaInvalid}>Simpan</Button>
+          <Button onClick={() => onSave(v)} disabled={!v.pickupId || !v.vehicleId || quotaInvalid || isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Simpan
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

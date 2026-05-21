@@ -1,7 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { 
+  adminListVehicles, 
+  adminUpsertVehicle, 
+  adminDeleteVehicle, 
+  adminSetVehiclePlate 
+} from "@/features/admin/services/admin.functions";
 import {
-  useAdmin,
   countSeatsInMap,
   renumberSeatMap,
   TIER_ORDER,
@@ -9,7 +16,7 @@ import {
   TYPE_LABEL,
   DEFAULT_CAPACITY,
 } from "@/features/admin/store/admin";
-import type { VehicleTemplate, SeatMarker } from "@/features/admin/store/admin";
+import type { VehicleTemplate, SeatMarker } from "@/features/admin/types";
 import { formatRupiah } from "@/shared/utils/utils";
 import type { VehicleType, VehicleTier } from "@/shared/types/shuttle";
 import { Button } from "@/shared/components/ui/button";
@@ -18,7 +25,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/shared/components/ui/sheet";
-import { Plus, Pencil, Trash2, Image as ImageIcon, Armchair } from "lucide-react";
+import { Plus, Pencil, Trash2, Image as ImageIcon, Armchair, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/shared/components/ui/alert-dialog";
 import { SeatImageEditor } from "@/features/admin/components/SeatImageEditor";
 import { SeatImageMap } from "@/features/admin/components/SeatImageMap";
@@ -30,7 +37,7 @@ export const Route = createFileRoute("/admin/vehicles")({
 });
 
 const emptyVehicle = (): VehicleTemplate => ({
-  id: "v-" + Date.now(),
+  id: "",
   name: "Kendaraan Baru",
   type: "minicar",
   plate: "BK 0000 GO",
@@ -45,7 +52,33 @@ const TIER_TONE: Record<VehicleTier, string> = {
 };
 
 function VehiclesPage() {
-  const { vehicles, upsertVehicle, deleteVehicle } = useAdmin();
+  const queryClient = useQueryClient();
+  const listFn = useServerFn(adminListVehicles);
+  const upsertFn = useServerFn(adminUpsertVehicle);
+  const deleteFn = useServerFn(adminDeleteVehicle);
+
+  const { data: vehicles = [], isLoading } = useQuery({
+    queryKey: ["admin-vehicles"],
+    queryFn: () => listFn(),
+  });
+
+  const upsertMutation = useMutation({
+    mutationFn: (v: any) => upsertFn({ data: v }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-vehicles"] });
+      setEditing(null);
+      toast.success("Kendaraan tersimpan");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteFn({ data: { id } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-vehicles"] });
+      toast.success("Kendaraan dihapus");
+    },
+  });
+
   const [editing, setEditing] = useState<VehicleTemplate | null>(null);
   const [typeFilter, setTypeFilter] = useState<"all" | VehicleType>("all");
   const [tierFilter, setTierFilter] = useState<"all" | VehicleTier>("all");
@@ -53,7 +86,7 @@ function VehiclesPage() {
   const filtered = useMemo(
     () =>
       vehicles.filter(
-        (v) => (typeFilter === "all" || v.type === typeFilter) && (tierFilter === "all" || v.tier === tierFilter),
+        (v: any) => (typeFilter === "all" || v.type === typeFilter) && (tierFilter === "all" || v.tier === tierFilter),
       ),
     [vehicles, typeFilter, tierFilter],
   );
@@ -61,7 +94,19 @@ function VehiclesPage() {
   const grouped = useMemo(() => {
     const m = new Map<VehicleTier, VehicleTemplate[]>();
     TIER_ORDER.forEach((t) => m.set(t, []));
-    filtered.forEach((v) => m.get(v.tier)?.push(v));
+    filtered.forEach((v: any) => {
+      const template: VehicleTemplate = {
+        id: v.id,
+        name: v.name,
+        type: v.type,
+        plate: v.plate,
+        tier: v.tier,
+        status: v.status,
+        imageUrl: v.image_url,
+        seatMap: v.seat_layout as any,
+      };
+      m.get(v.tier)?.push(template);
+    });
     return m;
   }, [filtered]);
 
@@ -101,52 +146,79 @@ function VehiclesPage() {
         </CardContent>
       </Card>
 
-      {TIER_ORDER.map((tier) => {
-        const list = grouped.get(tier) ?? [];
-        if (tierFilter !== "all" && tierFilter !== tier) return null;
-        return (
-          <section key={tier} className="space-y-2">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold tracking-tight">{TIER_LABEL[tier]}</h2>
-              <Badge variant="outline" className="text-xs">{list.length}</Badge>
-            </div>
-            {list.length === 0 ? (
-              <Card><CardContent className="p-6 text-center text-sm text-muted-foreground">Belum ada kendaraan {TIER_LABEL[tier]}.</CardContent></Card>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {list.map((v) => (
-                  <VehicleCard key={v.id} v={v} onEdit={() => setEditing(v)} onDelete={() => { deleteVehicle(v.id); toast.success("Kendaraan dihapus"); }} />
-                ))}
+      {isLoading ? (
+        <div className="flex h-32 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+      ) : (
+        TIER_ORDER.map((tier) => {
+          const list = grouped.get(tier) ?? [];
+          if (tierFilter !== "all" && tierFilter !== tier) return null;
+          return (
+            <section key={tier} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold tracking-tight">{TIER_LABEL[tier]}</h2>
+                <Badge variant="outline" className="text-xs">{list.length}</Badge>
               </div>
-            )}
-          </section>
-        );
-      })}
+              {list.length === 0 ? (
+                <Card><CardContent className="p-6 text-center text-sm text-muted-foreground">Belum ada kendaraan {TIER_LABEL[tier]}.</CardContent></Card>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {list.map((v) => (
+                    <VehicleCard 
+                      key={v.id} 
+                      v={v} 
+                      onEdit={() => setEditing(v)} 
+                      onDelete={() => deleteMutation.mutate(v.id)} 
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })
+      )}
 
       <VehicleEditor
         value={editing}
         onClose={() => setEditing(null)}
-        onSave={(v) => { upsertVehicle(v); toast.success("Kendaraan tersimpan"); setEditing(null); }}
+        onSave={(v) => { 
+          upsertMutation.mutate({
+            id: v.id || undefined,
+            name: v.name,
+            plate: v.plate,
+            type: v.type,
+            tier: v.tier,
+            image_url: v.imageUrl,
+            seat_layout: v.seatMap
+          });
+        }}
+        loading={upsertMutation.isPending}
       />
     </div>
   );
 }
 
 function VehicleCard({ v, onEdit, onDelete }: { v: VehicleTemplate; onEdit: () => void; onDelete: () => void }) {
-  const setVehiclePlate = useAdmin((s) => s.setVehiclePlate);
+  const queryClient = useQueryClient();
+  const setPlateFn = useServerFn(adminSetVehiclePlate);
+  
   const seatCount = countSeatsInMap(v.seatMap);
   const [editingPlate, setEditingPlate] = useState(false);
   const [plateDraft, setPlateDraft] = useState(v.plate);
 
-  const savePlate = () => {
+  const savePlate = async () => {
     const next = plateDraft.trim();
     if (!next) {
       toast.error("Plat tidak boleh kosong");
       return;
     }
-    setVehiclePlate(v.id, next);
-    setEditingPlate(false);
-    toast.success("Plat diperbarui");
+    try {
+      await setPlateFn({ data: { id: v.id, plate: next } });
+      queryClient.invalidateQueries({ queryKey: ["admin-vehicles"] });
+      setEditingPlate(false);
+      toast.success("Plat diperbarui");
+    } catch (e) {
+      toast.error("Gagal memperbarui plat");
+    }
   };
 
   return (
@@ -222,7 +294,7 @@ function VehicleCard({ v, onEdit, onDelete }: { v: VehicleTemplate; onEdit: () =
   );
 }
 
-function VehicleEditor({ value, onClose, onSave }: { value: VehicleTemplate | null; onClose: () => void; onSave: (v: VehicleTemplate) => void }) {
+function VehicleEditor({ value, onClose, onSave, loading }: { value: VehicleTemplate | null; onClose: () => void; onSave: (v: VehicleTemplate) => void; loading: boolean }) {
   const [v, setV] = useState<VehicleTemplate | null>(value);
   useEffect(() => setV(value), [value]);
 
@@ -297,7 +369,7 @@ function VehicleEditor({ value, onClose, onSave }: { value: VehicleTemplate | nu
           <div className="flex gap-2 sm:ml-auto">
             <Button variant="outline" onClick={onClose}>Batal</Button>
             <Button
-              disabled={!canSave}
+              disabled={!canSave || loading}
               onClick={() =>
                 onSave({
                   ...v,
@@ -305,7 +377,7 @@ function VehicleEditor({ value, onClose, onSave }: { value: VehicleTemplate | nu
                 })
               }
             >
-              Simpan
+              {loading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Simpan
             </Button>
           </div>
         </SheetFooter>

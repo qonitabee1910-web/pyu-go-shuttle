@@ -58,6 +58,189 @@ export const adminListPickupPoints = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+// ============ Pickup Points CRUD ============
+
+export const adminUpsertPickupPoint = createServerFn({ method: "POST" })
+  .middleware([requireAdminAuth])
+  .inputValidator((d: any) => 
+    z.object({
+      id: z.string().uuid().optional(),
+      name: z.string().min(1),
+      rayon: z.string().min(1),
+      address: z.string().min(1),
+      lat: z.number(),
+      lng: z.number(),
+      city: z.string().optional(),
+      distance_km: z.number().optional(),
+      eta_min: z.number().optional(),
+      image_url: z.string().optional(),
+      active: z.boolean().optional(),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase.from("pickup_points").upsert({
+      id: data.id || undefined,
+      name: data.name,
+      rayon: data.rayon,
+      address: data.address,
+      lat: data.lat,
+      lng: data.lng,
+      city: data.city || null,
+      distance_km: data.distance_km || 0,
+      eta_min: data.eta_min || 0,
+      image_url: data.image_url || null,
+      active: data.active ?? true,
+    });
+    if (error) throw error;
+    return { success: true };
+  });
+
+export const adminDeletePickupPoint = createServerFn({ method: "POST" })
+  .middleware([requireAdminAuth])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase.from("pickup_points").delete().eq("id", data.id);
+    if (error) throw error;
+    return { success: true };
+  });
+
+// ============ Vehicles CRUD ============
+
+export const adminUpsertVehicle = createServerFn({ method: "POST" })
+  .middleware([requireAdminAuth])
+  .inputValidator((d: any) => 
+    z.object({
+      id: z.string().uuid().optional(),
+      name: z.string().min(1),
+      plate: z.string().min(1),
+      type: z.enum(["minicar", "suv", "hiace"]),
+      tier: z.enum(["Reguler", "SemiExecutive", "Executive"]),
+      status: z.enum(["active", "maintenance", "offline"]).optional(),
+      image_url: z.string().optional(),
+      seat_layout: z.any().optional(),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase.from("vehicles").upsert({
+      id: data.id || undefined,
+      name: data.name,
+      plate: data.plate,
+      type: data.type,
+      tier: data.tier,
+      status: data.status ?? "active",
+      image_url: data.image_url || null,
+      seat_layout: data.seat_layout || null,
+    });
+    if (error) throw error;
+    return { success: true };
+  });
+
+export const adminDeleteVehicle = createServerFn({ method: "POST" })
+  .middleware([requireAdminAuth])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase.from("vehicles").delete().eq("id", data.id);
+    if (error) throw error;
+    return { success: true };
+  });
+
+export const adminSetVehicleStatus = createServerFn({ method: "POST" })
+  .middleware([requireAdminAuth])
+  .inputValidator((d: { id: string, status: string }) => 
+    z.object({ id: z.string().uuid(), status: z.string() }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase.from("vehicles").update({ status: data.status as any }).eq("id", data.id);
+    if (error) throw error;
+    return { success: true };
+  });
+
+export const adminSetVehiclePlate = createServerFn({ method: "POST" })
+  .middleware([requireAdminAuth])
+  .inputValidator((d: { id: string, plate: string }) => 
+    z.object({ id: z.string().uuid(), plate: z.string() }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase.from("vehicles").update({ plate: data.plate }).eq("id", data.id);
+    if (error) throw error;
+    return { success: true };
+  });
+
+// ============ Schedules CRUD ============
+
+export const adminUpsertSchedule = createServerFn({ method: "POST" })
+  .middleware([requireAdminAuth])
+  .inputValidator((d: any) => 
+    z.object({
+      id: z.string().uuid().optional(),
+      pickup_point_id: z.string().uuid(),
+      vehicle_id: z.string().uuid(),
+      departure_at: z.string(),
+      arrival_at: z.string().optional(),
+      price: z.number().nonnegative(),
+      active: z.boolean().optional(),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase.from("schedules").upsert({
+      id: data.id || undefined,
+      pickup_point_id: data.pickup_point_id,
+      vehicle_id: data.vehicle_id,
+      departure_at: data.departure_at,
+      arrival_at: data.arrival_at || null,
+      price: data.price,
+      active: data.active ?? true,
+    });
+    if (error) throw error;
+    return { success: true };
+  });
+
+export const adminDeleteSchedule = createServerFn({ method: "POST" })
+  .middleware([requireAdminAuth])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase.from("schedules").delete().eq("id", data.id);
+    if (error) throw error;
+    return { success: true };
+  });
+
+export const adminToggleScheduleActive = createServerFn({ method: "POST" })
+  .middleware([requireAdminAuth])
+  .inputValidator((d: { id: string, active: boolean }) => 
+    z.object({ id: z.string().uuid(), active: z.boolean() }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase.from("schedules").update({ active: data.active }).eq("id", data.id);
+    if (error) throw error;
+    return { success: true };
+  });
+
+// ============ Bookings Management ============
+
+export const adminSetBookingStatus = createServerFn({ method: "POST" })
+  .middleware([requireAdminAuth])
+  .inputValidator((d: { id: string, status: string, note?: string }) => 
+    z.object({ id: z.string().uuid(), status: z.string(), note: z.string().optional() }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase.from("bookings").update({ 
+      status: data.status as any,
+      note: data.note || undefined
+    }).eq("id", data.id);
+    if (error) throw error;
+    return { success: true };
+  });
+
 // ============ KPI / Analytics ============
 
 export const adminKpis = createServerFn({ method: "GET" })
