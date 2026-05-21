@@ -36,8 +36,8 @@ function ManifestPage() {
     queryFn: () => fetchManifest({ data: { scheduleId } }),
   });
 
-  if (isLoading || !data) return <div className="text-sm text-muted-foreground">Memuat manifest…</div>;
-  const { schedule, bookings, seatBookings } = data;
+  if (isLoading || !data || !data.schedule) return <div className="text-sm text-muted-foreground">Memuat manifest…</div>;
+  const { schedule, bookings, seatBookings } = data as { schedule: any; bookings: any[]; seatBookings: any[] };
 
   const handleCode = async (c: string) => {
     try {
