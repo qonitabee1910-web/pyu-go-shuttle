@@ -1,19 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useAdmin } from "@/features/admin/store/admin";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { formatRupiah } from "@/shared/utils/utils";
-import type { AdminBooking, BookingStatus } from "@/features/admin/store/admin";
+import type { BookingStatus } from "@/features/admin/types";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/shared/components/ui/sheet";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { StatusBadge } from "@/features/admin/components/StatusBadge";
 import { SeatImageMap } from "@/features/admin/components/SeatImageMap";
 import { toast } from "sonner";
 import { Separator } from "@/shared/components/ui/separator";
+import { 
+  adminListBookings, 
+  adminListPickupPoints, 
+  adminSetBookingStatus 
+} from "@/features/admin/services/admin.functions";
 
 export const Route = createFileRoute("/admin/bookings")({
   component: BookingsPage,
@@ -22,16 +28,58 @@ export const Route = createFileRoute("/admin/bookings")({
 const PAGE = 10;
 
 function BookingsPage() {
-  const { bookings, pickupPoints, schedules, vehicles, setBookingStatus } = useAdmin();
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<string>("all");
   const [pickup, setPickup] = useState<string>("all");
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<AdminBooking | null>(null);
+  const [selected, setSelected] = useState<any | null>(null);
+
+  const listBookingsFn = useServerFn(adminListBookings);
+  const listPickupsFn = useServerFn(adminListPickupPoints);
+  const setStatusFn = useServerFn(adminSetBookingStatus);
+
+  const { data: rawBookings = [], isLoading: loadingBookings } = useQuery({
+    queryKey: ["admin", "bookings"],
+    queryFn: () => listBookingsFn(),
+  });
+
+  const { data: pickupPoints = [], isLoading: loadingPickups } = useQuery({
+    queryKey: ["admin", "pickup-points"],
+    queryFn: () => listPickupsFn(),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string, status: BookingStatus }) => 
+      setStatusFn({ data: { id, status } }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "bookings"] });
+      toast.success("Status diperbarui");
+      if (selected?.id === variables.id) {
+        setSelected({ ...selected, status: variables.status });
+      }
+    },
+    onError: (err: any) => {
+      toast.error("Gagal memperbarui status: " + err.message);
+    }
+  });
+
+  const bookings = useMemo(() => {
+    return rawBookings.map((b: any) => ({
+      ...b,
+      pickupId: b.schedules?.pickup_point_id,
+      scheduleId: b.schedule_id,
+      passengerName: b.passenger_name,
+      passengerPhone: b.passenger_phone,
+      createdAt: b.created_at,
+      seats: b.seat_bookings?.map((sb: any) => sb.seat_no) || [],
+      amount: b.total,
+    }));
+  }, [rawBookings]);
 
   const filtered = useMemo(() => {
     const s = q.toLowerCase();
-    return bookings.filter((b) => {
+    return bookings.filter((b: any) => {
       if (status !== "all" && b.status !== status) return false;
       if (pickup !== "all" && b.pickupId !== pickup) return false;
       if (s && !(b.code.toLowerCase().includes(s) || b.passengerName.toLowerCase().includes(s))) return false;
@@ -42,11 +90,13 @@ function BookingsPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE));
   const slice = filtered.slice((page - 1) * PAGE, page * PAGE);
 
-  const updateStatus = (id: string, st: BookingStatus) => {
-    setBookingStatus(id, st);
-    toast.success("Status diperbarui");
-    if (selected?.id === id) setSelected({ ...selected, status: st });
-  };
+  if (loadingBookings || loadingPickups) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -67,8 +117,9 @@ function BookingsPage() {
               <SelectContent>
                 <SelectItem value="all">Semua status</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
                 <SelectItem value="boarded">Boarded</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="cancelled">Cancelled</SelectItem>
                 <SelectItem value="refunded">Refunded</SelectItem>
               </SelectContent>
@@ -77,7 +128,7 @@ function BookingsPage() {
               <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua pickup</SelectItem>
-                {pickupPoints.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                {pickupPoints.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -96,8 +147,8 @@ function BookingsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {slice.map((b) => {
-                  const p = pickupPoints.find((pp) => pp.id === b.pickupId);
+                {slice.map((b: any) => {
+                  const p = pickupPoints.find((pp: any) => pp.id === b.pickupId);
                   return (
                     <TableRow key={b.id} className="cursor-pointer hover:bg-muted/40" onClick={() => setSelected(b)}>
                       <TableCell className="font-mono text-xs">{b.code}</TableCell>
@@ -134,9 +185,12 @@ function BookingsPage() {
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
           {selected && (() => {
-            const p = pickupPoints.find((pp) => pp.id === selected.pickupId);
-            const sc = schedules.find((s) => s.id === selected.scheduleId);
-            const v = vehicles.find((vv) => vv.id === sc?.vehicleId);
+            const p = pickupPoints.find((pp: any) => pp.id === selected.pickupId);
+            const sc = selected.schedules;
+            const v = sc?.vehicles;
+            const depTime = sc?.departure_at ? sc.departure_at.split("T")[1].substring(0, 5) : "—";
+            const arrTime = sc?.arrival_at ? sc.arrival_at.split("T")[1].substring(0, 5) : "—";
+
             return (
               <>
                 <SheetHeader>
@@ -152,7 +206,7 @@ function BookingsPage() {
                   </Section>
                   <Section title="Perjalanan">
                     <Row k="Pickup" v={p?.name ?? "—"} />
-                    <Row k="Jadwal" v={sc ? `${sc.departureTime} → ${sc.arrivalTime}` : "—"} />
+                    <Row k="Jadwal" v={`${depTime} → ${arrTime}`} />
                     <Row k="Kendaraan" v={v ? `${v.name} • ${v.plate}` : "—"} />
                     <Row k="Kursi" v={selected.seats.join(", ")} />
                   </Section>
@@ -160,18 +214,18 @@ function BookingsPage() {
                     <Row k="Total" v={formatRupiah(selected.amount)} />
                     <Row k="Dibuat" v={new Date(selected.createdAt).toLocaleString("id-ID")} />
                   </Section>
-                  {v && v.imageUrl && v.seatMap && v.seatMap.length > 0 && (
+                  {v && v.image_url && v.seat_layout && v.seat_layout.length > 0 && (
                     <div>
                       <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Layout Kursi</div>
-                      <SeatImageMap imageUrl={v.imageUrl} markers={v.seatMap} booked={selected.seats} />
+                      <SeatImageMap imageUrl={v.image_url} markers={v.seat_layout} booked={selected.seats} />
                     </div>
                   )}
                   <Separator />
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" disabled={selected.status === "paid"} onClick={() => updateStatus(selected.id, "paid")}>Confirm Paid</Button>
-                    <Button size="sm" variant="secondary" disabled={selected.status === "boarded"} onClick={() => updateStatus(selected.id, "boarded")}>Mark Boarded</Button>
-                    <Button size="sm" disabled={selected.status === "completed"} onClick={() => updateStatus(selected.id, "completed")}>Complete</Button>
-                    <Button size="sm" variant="outline" disabled={selected.status === "cancelled"} onClick={() => updateStatus(selected.id, "cancelled")}>Cancel</Button>
+                    <Button size="sm" disabled={selected.status === "paid" || statusMutation.isPending} onClick={() => statusMutation.mutate({ id: selected.id, status: "paid" })}>Confirm Paid</Button>
+                    <Button size="sm" variant="secondary" disabled={selected.status === "boarded" || statusMutation.isPending} onClick={() => statusMutation.mutate({ id: selected.id, status: "boarded" })}>Mark Boarded</Button>
+                    <Button size="sm" disabled={selected.status === "completed" || statusMutation.isPending} onClick={() => statusMutation.mutate({ id: selected.id, status: "completed" })}>Complete</Button>
+                    <Button size="sm" variant="outline" disabled={selected.status === "cancelled" || statusMutation.isPending} onClick={() => statusMutation.mutate({ id: selected.id, status: "cancelled" })}>Cancel</Button>
                   </div>
                 </div>
               </>

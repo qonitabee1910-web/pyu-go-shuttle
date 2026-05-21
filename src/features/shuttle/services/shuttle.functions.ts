@@ -41,20 +41,64 @@ export const listHomePageData = createServerFn({ method: "GET" })
       process.env.SUPABASE_PUBLISHABLE_KEY!
     );
     
-    const [pickups, popular] = await Promise.all([
-      supabase.from("pickup_points").select("*").eq("active", true).limit(8),
-      supabase.from("pickup_points").select("*").eq("active", true).limit(4), // Mocking popular as a subset for now
+    // 1. Get all active pickup points (limit 8 for the grid)
+    const { data: pickups } = await supabase
+      .from("pickup_points")
+      .select("*")
+      .eq("active", true)
+      .order("name")
+      .limit(8);
+
+    // 2. Get popular routes (logic: top bookings in last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const { data: recentBookings } = await supabase
+      .from("bookings")
+      .select("schedules(pickup_point_id)")
+      .gte("created_at", thirtyDaysAgo.toISOString())
+      .limit(1000);
+
+    const counts = new Map<string, number>();
+    (recentBookings ?? []).forEach((b: any) => {
+      const pid = b.schedules?.pickup_point_id;
+      if (pid) counts.set(pid, (counts.get(pid) ?? 0) + 1);
+    });
+
+    const sortedPids = Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(e => e[0]);
+
+    // Fallback to first 4 pickups if no bookings
+    const popularPids = sortedPids.length >= 4 
+      ? sortedPids 
+      : (pickups ?? []).slice(0, 4).map(p => p.id);
+
+    const [popularPoints, minPrices] = await Promise.all([
+      supabase.from("pickup_points").select("*").in("id", popularPids),
+      supabase.from("schedules").select("pickup_point_id, price").in("pickup_point_id", popularPids).eq("active", true)
     ]);
 
-    return {
-      pickups: pickups.data ?? [],
-      popularRoutes: (popular.data ?? []).map(p => ({
+    const priceMap = new Map<string, number>();
+    (minPrices.data ?? []).forEach(s => {
+      const cur = priceMap.get(s.pickup_point_id) ?? Infinity;
+      if (s.price < cur) priceMap.set(s.pickup_point_id, s.price);
+    });
+
+    const popularRoutes = (popularPoints.data ?? [])
+      .sort((a, b) => popularPids.indexOf(a.id) - popularPids.indexOf(b.id))
+      .map(p => ({
         id: p.id,
         from: p.name,
         to: "KNO Airport",
-        price: 150000, // Hardcoded for now or fetch from schedules
-        duration: "1j 30m"
-      }))
+        price: priceMap.get(p.id) || 150000,
+        duration: p.eta_min ? `${Math.floor(p.eta_min / 60)}j ${p.eta_min % 60}m` : "1j 30m"
+      }));
+
+    return {
+      pickups: pickups ?? [],
+      popularRoutes
     };
   });
 

@@ -1,16 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { MapPin, Navigation, Car, Zap, Crown, Loader2 } from "lucide-react";
+import { Navigation, Car, Zap, Crown, Loader2 } from "lucide-react";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { MapView } from "@/shared/components/MapView";
 import { formatRupiah } from "@/shared/utils/utils";
-import { nearbyDrivers } from "@/shared/types/shuttle";
 import { useAuth } from "@/shared/hooks/use-auth";
 import { createRideOrder } from "@/features/ride/services/ride-order.functions";
+import { listOnlineDriversNearby } from "@/features/ride/services/drivers.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/ride")({
   head: () => ({ meta: [{ title: "Ride Hailing — PYU-GO" }] }),
@@ -23,7 +24,6 @@ const tiers = [
   { id: "vip", label: "VIP", icon: Crown, eta: 5, price: 45000, desc: "Innova / Premium" },
 ];
 
-// Default pickup near Medan; in production replace with geolocation
 const DEFAULT_PICKUP = { lat: 3.585, lng: 98.679, address: "Lokasi saya saat ini" };
 const DEFAULT_DROPOFF = { lat: 3.642, lng: 98.879, address: "" };
 
@@ -31,9 +31,52 @@ function RidePage() {
   const [pickup, setPickup] = useState(DEFAULT_PICKUP.address);
   const [dest, setDest] = useState("");
   const [tier, setTier] = useState("eco");
+  const [drivers, setDrivers] = useState<any[]>([]);
   const nav = useNavigate();
   const { user } = useAuth();
   const createOrder = useServerFn(createRideOrder);
+  const listDriversFn = useServerFn(listOnlineDriversNearby);
+
+  // Initial fetch
+  const { data: initialDrivers } = useQuery({
+    queryKey: ["ride", "nearby-drivers"],
+    queryFn: () => listDriversFn({ data: { lat: DEFAULT_PICKUP.lat, lng: DEFAULT_PICKUP.lng } }),
+    enabled: !!user,
+  });
+
+  useEffect(() => {
+    if (initialDrivers) setDrivers(initialDrivers);
+  }, [initialDrivers]);
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("driver_locations_nearby")
+      .on(
+        "postgres_changes",
+        { event: "*", table: "driver_locations", schema: "public" },
+        async (payload: any) => {
+          // Update driver position in local state
+          const updated = payload.new;
+          if (!updated || !updated.driver_id) return;
+
+          setDrivers((prev) => 
+            prev.map((d) => 
+              d.id === updated.driver_id 
+                ? { ...d, lat: updated.lat, lng: updated.lng } 
+                : d
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const selected = tiers.find((t) => t.id === tier)!;
   const canBook = dest.trim().length > 2;
@@ -69,7 +112,7 @@ function RidePage() {
         <MapView
           center={[3.585, 98.679]}
           zoom={14}
-          points={nearbyDrivers.map((d) => ({ lat: d.lat, lng: d.lng, label: d.name }))}
+          points={drivers.map((d) => ({ lat: d.lat, lng: d.lng, label: d.name }))}
           className="h-56 w-full"
         />
 
@@ -120,12 +163,12 @@ function RidePage() {
           })}
         </div>
 
-        <div className="mt-5 rounded-2xl bg-card p-4 shadow-soft">
+        <div className="mt-4 rounded-2xl bg-card p-4 shadow-soft">
           <div className="mb-2 flex items-center gap-2 text-sm font-bold">
-            <Navigation className="h-4 w-4 text-primary" /> {nearbyDrivers.length} driver di dekatmu
+            <Navigation className="h-4 w-4 text-primary" /> {drivers.length} driver di dekatmu
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
-            {nearbyDrivers.map((d) => (
+            {drivers.map((d) => (
               <div key={d.id} className="rounded-xl bg-muted p-2">
                 <div className="text-xs font-bold">{d.name}</div>
                 <div className="text-[10px] text-muted-foreground">{d.vehicle}</div>

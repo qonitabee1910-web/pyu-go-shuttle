@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { AdminSchedule, VehicleTemplate } from "@/features/admin/types";
+import { useServerFn } from "@tanstack/react-start";
+import type { AdminSchedule } from "@/features/admin/types";
 import { formatRupiah } from "@/shared/utils/utils";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -45,24 +46,31 @@ function SchedulesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<AdminSchedule | null>(null);
 
+  const listSchedulesFn = useServerFn(adminListSchedules);
+  const listVehiclesFn = useServerFn(adminListVehicles);
+  const listPickupsFn = useServerFn(adminListPickupPoints);
+  const listBookingsFn = useServerFn(adminListBookings);
+  const upsertScheduleFn = useServerFn(adminUpsertSchedule);
+  const deleteScheduleFn = useServerFn(adminDeleteSchedule);
+
   const { data: rawSchedules = [], isLoading: loadingSchedules } = useQuery({
     queryKey: ["admin", "schedules"],
-    queryFn: () => adminListSchedules(),
+    queryFn: () => listSchedulesFn(),
   });
 
   const { data: vehicles = [], isLoading: loadingVehicles } = useQuery({
     queryKey: ["admin", "vehicles"],
-    queryFn: () => adminListVehicles(),
+    queryFn: () => listVehiclesFn(),
   });
 
   const { data: pickupPoints = [], isLoading: loadingPickups } = useQuery({
     queryKey: ["admin", "pickup-points"],
-    queryFn: () => adminListPickupPoints(),
+    queryFn: () => listPickupsFn(),
   });
 
   const { data: bookings = [], isLoading: loadingBookings } = useQuery({
     queryKey: ["admin", "bookings"],
-    queryFn: () => adminListBookings(),
+    queryFn: () => listBookingsFn(),
   });
 
   const upsertMutation = useMutation({
@@ -72,14 +80,16 @@ function SchedulesPage() {
       const now = new Date();
       const dateStr = now.toISOString().split("T")[0];
       
-      return adminUpsertSchedule({
-        id: data.id || undefined,
-        pickup_point_id: data.pickupId,
-        vehicle_id: data.vehicleId,
-        departure_at: `${dateStr}T${data.departureTime}:00+07:00`,
-        arrival_at: data.arrivalTime ? `${dateStr}T${data.arrivalTime}:00+07:00` : undefined,
-        price: data.price,
-        active: data.active,
+      return upsertScheduleFn({
+        data: {
+          id: data.id || undefined,
+          pickup_point_id: data.pickupId,
+          vehicle_id: data.vehicleId,
+          departure_at: `${dateStr}T${data.departureTime}:00+07:00`,
+          arrival_at: data.arrivalTime ? `${dateStr}T${data.arrivalTime}:00+07:00` : undefined,
+          price: data.price,
+          active: data.active,
+        }
       });
     },
     onSuccess: () => {
@@ -93,7 +103,7 @@ function SchedulesPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => adminDeleteSchedule({ id }),
+    mutationFn: (id: string) => deleteScheduleFn({ data: { id } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "schedules"] });
       toast.success("Jadwal dihapus");

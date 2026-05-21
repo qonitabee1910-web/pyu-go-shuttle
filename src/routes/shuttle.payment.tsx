@@ -10,7 +10,7 @@ import { formatRupiah } from "@/shared/utils/utils";
 import { KNO_AIRPORT } from "@/shared/types/shuttle";
 import { toast } from "sonner";
 import { createBooking } from "@/features/booking/services/bookings.functions";
-import { mockPayBooking } from "@/features/booking/services/payments.functions";
+import { payBooking } from "@/features/booking/services/payments.functions";
 import { createXenditInvoice } from "@/features/ride/services/ride.functions";
 
 export const Route = createFileRoute("/shuttle/payment")({
@@ -32,7 +32,7 @@ function PaymentPage() {
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
 
   const doCreate = useServerFn(createBooking);
-  const doPay = useServerFn(mockPayBooking);
+  const doPay = useServerFn(payBooking);
   const doXendit = useServerFn(createXenditInvoice);
 
   useEffect(() => {

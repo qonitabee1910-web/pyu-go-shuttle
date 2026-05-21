@@ -1,5 +1,5 @@
 import type { PickupPoint, VehicleType, VehicleTier } from "@/shared/types/shuttle";
-import type { SeatMarker, VehicleStatus, VehicleTemplate, AdminSchedule, BookingStatus, AdminBooking } from "./types";
+import type { SeatMarker, VehicleStatus, VehicleTemplate, AdminSchedule, BookingStatus, AdminBooking } from "../types";
 
 export const VEHICLE_STATUS_LABEL: Record<VehicleStatus, string> = {
   active: "Aktif",

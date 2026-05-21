@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -45,19 +46,29 @@ import {
   Bus,
   Pencil,
   Power,
-  Wrench,
   Users,
   ArrowRight,
+  Loader2,
+  TrendingUp,
 } from "lucide-react";
 import {
-  useAdmin,
   VEHICLE_STATUS_LABEL,
   TIER_LABEL,
   TYPE_LABEL,
   countSeatsInMap,
 } from "@/features/admin/store/admin";
-import type { VehicleStatus, VehicleTemplate, AdminSchedule } from "@/features/admin/store/admin";
+import type { VehicleStatus } from "@/features/admin/types";
 import { formatRupiah } from "@/shared/utils/utils";
+import { 
+  adminListVehicles, 
+  adminListSchedules, 
+  adminListBookings, 
+  adminListPickupPoints,
+  adminSetVehicleStatus,
+  adminSetVehiclePlate,
+  adminToggleScheduleActive,
+  adminKpis
+} from "@/features/admin/services/admin.functions";
 
 export const Route = createFileRoute("/admin/operations")({
   head: () => ({ meta: [{ title: "Operations — PYU-GO Admin" }] }),
@@ -71,65 +82,111 @@ const STATUS_STYLE: Record<VehicleStatus, string> = {
 };
 
 function OperationsPage() {
-  const {
-    vehicles,
-    schedules,
-    bookings,
-    pickupPoints,
-    setVehicleStatus,
-    setVehiclePlate,
-    toggleScheduleActive,
-  } = useAdmin();
-
-  const [editVehicle, setEditVehicle] = useState<VehicleTemplate | null>(null);
+  const queryClient = useQueryClient();
+  const [editVehicle, setEditVehicle] = useState<any | null>(null);
   const [filter, setFilter] = useState<"all" | VehicleStatus>("all");
 
-  // Build per-schedule occupancy from bookings (confirmed/boarded only)
+  const listVehiclesFn = useServerFn(adminListVehicles);
+  const listSchedulesFn = useServerFn(adminListSchedules);
+  const listBookingsFn = useServerFn(adminListBookings);
+  const listPickupsFn = useServerFn(adminListPickupPoints);
+  const kpisFn = useServerFn(adminKpis);
+  const setStatusFn = useServerFn(adminSetVehicleStatus);
+  const setPlateFn = useServerFn(adminSetVehiclePlate);
+  const toggleActiveFn = useServerFn(adminToggleScheduleActive);
+
+  const { data: vehicles = [], isLoading: loadingVehicles } = useQuery({
+    queryKey: ["admin", "vehicles"],
+    queryFn: () => listVehiclesFn(),
+  });
+
+  const { data: schedules = [], isLoading: loadingSchedules } = useQuery({
+    queryKey: ["admin", "schedules"],
+    queryFn: () => listSchedulesFn(),
+  });
+
+  const { data: bookings = [], isLoading: loadingBookings } = useQuery({
+    queryKey: ["admin", "bookings"],
+    queryFn: () => listBookingsFn(),
+  });
+
+  const { data: pickupPoints = [], isLoading: loadingPickups } = useQuery({
+    queryKey: ["admin", "pickup-points"],
+    queryFn: () => listPickupsFn(),
+  });
+
+  const { data: kpis, isLoading: loadingKpis } = useQuery({
+    queryKey: ["admin", "kpis"],
+    queryFn: () => kpisFn(),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string, status: VehicleStatus }) => 
+      setStatusFn({ data: { id, status } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "vehicles"] });
+    },
+    onError: (err: any) => toast.error(err.message)
+  });
+
+  const plateMutation = useMutation({
+    mutationFn: ({ id, plate }: { id: string, plate: string }) => 
+      setPlateFn({ data: { id, plate } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "vehicles"] });
+      setEditVehicle(null);
+    },
+    onError: (err: any) => toast.error(err.message)
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, active }: { id: string, active: boolean }) => 
+      toggleActiveFn({ data: { id, active } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "schedules"] });
+    },
+    onError: (err: any) => toast.error(err.message)
+  });
+
   const scheduleSeats = useMemo(() => {
     const map = new Map<string, number>();
-    bookings.forEach((b) => {
+    bookings.forEach((b: any) => {
       if (b.status === "paid" || b.status === "boarded") {
-        map.set(b.scheduleId, (map.get(b.scheduleId) ?? 0) + b.seats.length);
+        map.set(b.schedule_id, (map.get(b.schedule_id) ?? 0) + (b.seat_bookings?.length || 0));
       }
     });
     return map;
   }, [bookings]);
 
   const vehiclesById = useMemo(
-    () => new Map(vehicles.map((v) => [v.id, v])),
+    () => new Map(vehicles.map((v: any) => [v.id, v])),
     [vehicles],
   );
   const pickupById = useMemo(
-    () => new Map(pickupPoints.map((p) => [p.id, p])),
+    () => new Map(pickupPoints.map((p: any) => [p.id, p])),
     [pickupPoints],
   );
 
-  const counts = useMemo(() => {
-    const c = { active: 0, maintenance: 0, offline: 0 };
-    vehicles.forEach((v) => {
-      const s = v.status ?? "active";
-      c[s] += 1;
-    });
-    return c;
-  }, [vehicles]);
-
-  const filteredVehicles = vehicles.filter((v) => {
+  const filteredVehicles = vehicles.filter((v: any) => {
     const s = v.status ?? "active";
     return filter === "all" || s === filter;
   });
 
-  // Schedule density rows with calculations
   const scheduleRows = useMemo(() => {
     return schedules
-      .map((s) => {
-        const v = vehiclesById.get(s.vehicleId);
-        const capacity = countSeatsInMap(v?.seatMap);
+      .map((s: any) => {
+        const v = vehiclesById.get(s.vehicle_id);
+        const capacity = countSeatsInMap(v?.seat_layout);
         const booked = scheduleSeats.get(s.id) ?? 0;
         const occ = capacity ? Math.round((booked / capacity) * 100) : 0;
         return {
-          schedule: s,
+          schedule: {
+            ...s,
+            departureTime: s.departure_at.split("T")[1].substring(0, 5),
+            arrivalTime: s.arrival_at ? s.arrival_at.split("T")[1].substring(0, 5) : "—",
+          },
           vehicle: v,
-          pickup: pickupById.get(s.pickupId),
+          pickup: pickupById.get(s.pickup_point_id),
           capacity,
           booked,
           occ,
@@ -141,15 +198,23 @@ function OperationsPage() {
   const avgOcc = scheduleRows.length
     ? Math.round(scheduleRows.reduce((a, r) => a + r.occ, 0) / scheduleRows.length)
     : 0;
-  const activeSchedules = schedules.filter((s) => s.active).length;
+  const activeSchedules = schedules.filter((s: any) => s.active).length;
 
-  const cycleStatus = (v: VehicleTemplate) => {
+  const cycleStatus = (v: any) => {
     const order: VehicleStatus[] = ["active", "maintenance", "offline"];
-    const cur = v.status ?? "active";
+    const cur = (v.status as VehicleStatus) ?? "active";
     const next = order[(order.indexOf(cur) + 1) % order.length];
-    setVehicleStatus(v.id, next);
+    statusMutation.mutate({ id: v.id, status: next });
     toast.success(`${v.name} → ${VEHICLE_STATUS_LABEL[next]}`);
   };
+
+  if (loadingVehicles || loadingSchedules || loadingBookings || loadingPickups || loadingKpis) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -160,33 +225,31 @@ function OperationsPage() {
         </p>
       </div>
 
-      {/* KPI strip */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi
           icon={<Activity className="h-5 w-5" />}
-          label="Kendaraan aktif"
-          value={`${counts.active}/${vehicles.length}`}
+          label="Bookings Today"
+          value={kpis?.bookingsToday ?? 0}
         />
         <Kpi
-          icon={<Wrench className="h-5 w-5" />}
-          label="Maintenance"
-          value={counts.maintenance}
-          tone="amber"
+          icon={<TrendingUp className="h-5 w-5" />}
+          label="Revenue (Month)"
+          value={formatRupiah(kpis?.revenueMonth ?? 0)}
+          tone="emerald"
         />
         <Kpi
           icon={<Users className="h-5 w-5" />}
-          label="Rata-rata occupancy"
+          label="Avg Occupancy"
           value={`${avgOcc}%`}
         />
         <Kpi
           icon={<Bus className="h-5 w-5" />}
-          label="Jadwal aktif"
+          label="Active Schedules"
           value={`${activeSchedules}/${schedules.length}`}
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-5">
-        {/* Active vehicles */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
             <div>
@@ -209,8 +272,8 @@ function OperationsPage() {
             </Select>
           </CardHeader>
           <CardContent className="space-y-2">
-            {filteredVehicles.map((v) => {
-              const status = v.status ?? "active";
+            {filteredVehicles.map((v: any) => {
+              const status = (v.status as VehicleStatus) ?? "active";
               return (
                 <div
                   key={v.id}
@@ -229,7 +292,7 @@ function OperationsPage() {
                       </span>
                     </div>
                     <div className="text-[11px] text-muted-foreground">
-                      {TYPE_LABEL[v.type]} • {TIER_LABEL[v.tier]} •{" "}
+                      {TYPE_LABEL[v.type as keyof typeof TYPE_LABEL]} • {TIER_LABEL[v.tier as keyof typeof TIER_LABEL]} •{" "}
                       <span className="font-mono font-semibold text-foreground">{v.plate}</span>
                     </div>
                   </div>
@@ -238,7 +301,6 @@ function OperationsPage() {
                     variant="ghost"
                     className="h-8 w-8"
                     onClick={() => setEditVehicle(v)}
-                    aria-label="Edit plat"
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -247,22 +309,15 @@ function OperationsPage() {
                     variant="outline"
                     className="h-8 w-8"
                     onClick={() => cycleStatus(v)}
-                    aria-label="Ubah status"
                   >
                     <Power className="h-4 w-4" />
                   </Button>
                 </div>
               );
             })}
-            {filteredVehicles.length === 0 && (
-              <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                Tidak ada kendaraan untuk filter ini.
-              </div>
-            )}
           </CardContent>
         </Card>
 
-        {/* Seat density per schedule */}
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Kepadatan kursi per jadwal</CardTitle>
@@ -282,7 +337,7 @@ function OperationsPage() {
               </TableHeader>
               <TableBody>
                 {scheduleRows.map(({ schedule: s, vehicle: v, pickup, capacity, booked, occ }) => {
-                  const vStatus = v?.status ?? "active";
+                  const vStatus = (v?.status as VehicleStatus) ?? "active";
                   const flag = vStatus !== "active" || !s.active;
                   return (
                     <TableRow key={s.id} className={flag ? "opacity-70" : ""}>
@@ -313,38 +368,38 @@ function OperationsPage() {
                       <TableCell className="align-top">
                         <DensityBar booked={booked} capacity={capacity} occ={occ} />
                       </TableCell>
-                  <TableCell className="text-right align-top">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant={s.active ? "outline" : "default"}
-                          className="h-7 text-xs"
-                        >
-                          {s.active ? "Nonaktifkan" : "Aktifkan"}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>{s.active ? "Nonaktifkan jadwal?" : "Aktifkan jadwal?"}</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {s.active 
-                              ? "Jadwal ini tidak akan muncul di aplikasi pengguna." 
-                              : "Jadwal ini akan kembali muncul dan dapat dipesan oleh pengguna."}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Batal</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => {
-                            toggleScheduleActive(s.id);
-                            toast.success(`Jadwal ${s.departureTime} ${s.active ? "dinonaktifkan" : "diaktifkan"}`);
-                          }}>
-                            {s.active ? "Ya, Nonaktifkan" : "Ya, Aktifkan"}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
+                      <TableCell className="text-right align-top">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant={s.active ? "outline" : "default"}
+                              className="h-7 text-xs"
+                            >
+                              {s.active ? "Nonaktifkan" : "Aktifkan"}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>{s.active ? "Nonaktifkan jadwal?" : "Aktifkan jadwal?"}</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {s.active 
+                                  ? "Jadwal ini tidak akan muncul di aplikasi pengguna." 
+                                  : "Jadwal ini akan kembali muncul dan dapat dipesan oleh pengguna."}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => {
+                                toggleMutation.mutate({ id: s.id, active: !s.active });
+                                toast.success(`Jadwal ${s.departureTime} ${s.active ? "dinonaktifkan" : "diaktifkan"}`);
+                              }}>
+                                {s.active ? "Ya, Nonaktifkan" : "Ya, Aktifkan"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -359,10 +414,10 @@ function OperationsPage() {
         onClose={() => setEditVehicle(null)}
         onSave={(plate) => {
           if (!editVehicle) return;
-          setVehiclePlate(editVehicle.id, plate);
+          plateMutation.mutate({ id: editVehicle.id, plate });
           toast.success(`Plat ${editVehicle.name} diperbarui ke ${plate}`);
-          setEditVehicle(null);
         }}
+        isSaving={plateMutation.isPending}
       />
     </div>
   );
@@ -407,10 +462,12 @@ function EditPlateDialog({
   vehicle,
   onClose,
   onSave,
+  isSaving
 }: {
-  vehicle: VehicleTemplate | null;
+  vehicle: any | null;
   onClose: () => void;
   onSave: (plate: string) => void;
+  isSaving: boolean;
 }) {
   const [plate, setPlate] = useState("");
 
@@ -434,7 +491,7 @@ function EditPlateDialog({
         <DialogHeader>
           <DialogTitle>Update plat kendaraan</DialogTitle>
           <DialogDescription>
-            {vehicle?.name} • {vehicle ? TYPE_LABEL[vehicle.type] : ""}
+            {vehicle?.name} • {vehicle ? TYPE_LABEL[vehicle.type as keyof typeof TYPE_LABEL] : ""}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
@@ -456,9 +513,10 @@ function EditPlateDialog({
             Batal
           </Button>
           <Button
-            disabled={!valid}
+            disabled={!valid || isSaving}
             onClick={() => onSave(plate.trim().toUpperCase())}
           >
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Simpan
           </Button>
         </DialogFooter>
@@ -476,7 +534,7 @@ function Kpi({
   icon: React.ReactNode;
   label: string;
   value: string | number;
-  tone?: "amber";
+  tone?: "emerald" | "amber";
 }) {
   return (
     <Card>
@@ -485,7 +543,9 @@ function Kpi({
           className={`grid h-11 w-11 place-items-center rounded-xl ${
             tone === "amber"
               ? "bg-amber-100 text-amber-700"
-              : "bg-primary/10 text-primary"
+              : tone === "emerald"
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-primary/10 text-primary"
           }`}
         >
           {icon}
@@ -499,5 +559,3 @@ function Kpi({
   );
 }
 
-import { StatusBadge } from "@/features/admin/components/StatusBadge";
-import type { BookingStatus } from "@/features/admin/store/admin";

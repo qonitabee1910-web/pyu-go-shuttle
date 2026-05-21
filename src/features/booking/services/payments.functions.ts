@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export const mockPayBooking = createServerFn({ method: "POST" })
+export const payBooking = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { bookingId: string; method?: string }) =>
     z.object({ bookingId: z.string().uuid(), method: z.string().optional() }).parse(d),

@@ -37,9 +37,3 @@ export const KNO_AIRPORT = {
   lng: 98.8853,
 };
 
-export const nearbyDrivers = [
-  { id: "d1", name: "Andi", plate: "BK 1122 AB", rating: 4.9, lat: 3.5852, lng: 98.6790, vehicle: "Avanza" },
-  { id: "d2", name: "Budi", plate: "BK 3344 CD", rating: 4.8, lat: 3.5891, lng: 98.6712, vehicle: "Xenia" },
-  { id: "d3", name: "Cici", plate: "BK 5566 EF", rating: 5.0, lat: 3.5805, lng: 98.6855, vehicle: "Innova" },
-];
-

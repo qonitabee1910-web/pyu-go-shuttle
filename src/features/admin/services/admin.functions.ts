@@ -21,7 +21,7 @@ export const adminListBookings = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data, error } = await supabase
       .from("bookings")
-      .select("*, schedules(*, vehicles(*), pickup_points(*))")
+      .select("*, seat_bookings(*), schedules(*, vehicles(*), pickup_points(*))")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw error;
