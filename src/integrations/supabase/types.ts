@@ -324,6 +324,7 @@ export type Database = {
           price: number
           route_id: string
           seats_total: number
+          status: string
           tier: Database["public"]["Enums"]["vehicle_tier"]
           vehicle_id: string
         }
@@ -337,6 +338,7 @@ export type Database = {
           price: number
           route_id: string
           seats_total: number
+          status?: string
           tier?: Database["public"]["Enums"]["vehicle_tier"]
           vehicle_id: string
         }
@@ -350,6 +352,7 @@ export type Database = {
           price?: number
           route_id?: string
           seats_total?: number
+          status?: string
           tier?: Database["public"]["Enums"]["vehicle_tier"]
           vehicle_id?: string
         }
@@ -380,6 +383,7 @@ export type Database = {
       seat_bookings: {
         Row: {
           booking_id: string
+          checked_in_at: string | null
           created_at: string
           id: string
           passenger_name: string | null
@@ -387,6 +391,7 @@ export type Database = {
         }
         Insert: {
           booking_id: string
+          checked_in_at?: string | null
           created_at?: string
           id?: string
           passenger_name?: string | null
@@ -394,6 +399,7 @@ export type Database = {
         }
         Update: {
           booking_id?: string
+          checked_in_at?: string | null
           created_at?: string
           id?: string
           passenger_name?: string | null
