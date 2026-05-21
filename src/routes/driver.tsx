@@ -5,7 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { LogOut, LayoutDashboard, Calendar, Car } from "lucide-react";
 import { Toaster } from "@/shared/components/ui/sonner";
 
-export const Route = createFileRoute("/_driver")({
+export const Route = createFileRoute("/driver")({
   head: () => ({ meta: [{ title: "Driver — PYU-GO" }] }),
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();
