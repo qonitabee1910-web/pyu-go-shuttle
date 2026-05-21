@@ -33,9 +33,12 @@ import { Route as AuthOtpRouteImport } from './routes/auth.otp'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AdminVehiclesRouteImport } from './routes/admin.vehicles'
 import { Route as AdminSchedulesRouteImport } from './routes/admin.schedules'
+import { Route as AdminRoutesRouteImport } from './routes/admin.routes'
 import { Route as AdminPickupPointsRouteImport } from './routes/admin.pickup-points'
 import { Route as AdminOperationsRouteImport } from './routes/admin.operations'
+import { Route as AdminDriversRouteImport } from './routes/admin.drivers'
 import { Route as AdminBookingsRouteImport } from './routes/admin.bookings'
+import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as ShuttlePickupPointIdRouteImport } from './routes/shuttle.pickup.$pointId'
 import { Route as DriverTripsScheduleIdRouteImport } from './routes/driver.trips.$scheduleId'
 import { Route as DriverRidesIdRouteImport } from './routes/driver.rides.$id'
@@ -160,6 +163,11 @@ const AdminSchedulesRoute = AdminSchedulesRouteImport.update({
   path: '/schedules',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminRoutesRoute = AdminRoutesRouteImport.update({
+  id: '/routes',
+  path: '/routes',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPickupPointsRoute = AdminPickupPointsRouteImport.update({
   id: '/pickup-points',
   path: '/pickup-points',
@@ -170,9 +178,19 @@ const AdminOperationsRoute = AdminOperationsRouteImport.update({
   path: '/operations',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDriversRoute = AdminDriversRouteImport.update({
+  id: '/drivers',
+  path: '/drivers',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminBookingsRoute = AdminBookingsRouteImport.update({
   id: '/bookings',
   path: '/bookings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => AdminRoute,
 } as any)
 const ShuttlePickupPointIdRoute = ShuttlePickupPointIdRouteImport.update({
@@ -198,9 +216,12 @@ export interface FileRoutesByFullPath {
   '/bookings': typeof BookingsRoute
   '/driver': typeof DriverRouteWithChildren
   '/ride': typeof RideRouteWithChildren
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/bookings': typeof AdminBookingsRoute
+  '/admin/drivers': typeof AdminDriversRoute
   '/admin/operations': typeof AdminOperationsRoute
   '/admin/pickup-points': typeof AdminPickupPointsRoute
+  '/admin/routes': typeof AdminRoutesRoute
   '/admin/schedules': typeof AdminSchedulesRoute
   '/admin/vehicles': typeof AdminVehiclesRoute
   '/auth/login': typeof AuthLoginRoute
@@ -228,9 +249,12 @@ export interface FileRoutesByTo {
   '/account': typeof AccountRoute
   '/bookings': typeof BookingsRoute
   '/ride': typeof RideRouteWithChildren
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/bookings': typeof AdminBookingsRoute
+  '/admin/drivers': typeof AdminDriversRoute
   '/admin/operations': typeof AdminOperationsRoute
   '/admin/pickup-points': typeof AdminPickupPointsRoute
+  '/admin/routes': typeof AdminRoutesRoute
   '/admin/schedules': typeof AdminSchedulesRoute
   '/admin/vehicles': typeof AdminVehiclesRoute
   '/auth/login': typeof AuthLoginRoute
@@ -261,9 +285,12 @@ export interface FileRoutesById {
   '/bookings': typeof BookingsRoute
   '/driver': typeof DriverRouteWithChildren
   '/ride': typeof RideRouteWithChildren
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/bookings': typeof AdminBookingsRoute
+  '/admin/drivers': typeof AdminDriversRoute
   '/admin/operations': typeof AdminOperationsRoute
   '/admin/pickup-points': typeof AdminPickupPointsRoute
+  '/admin/routes': typeof AdminRoutesRoute
   '/admin/schedules': typeof AdminSchedulesRoute
   '/admin/vehicles': typeof AdminVehiclesRoute
   '/auth/login': typeof AuthLoginRoute
@@ -295,9 +322,12 @@ export interface FileRouteTypes {
     | '/bookings'
     | '/driver'
     | '/ride'
+    | '/admin/analytics'
     | '/admin/bookings'
+    | '/admin/drivers'
     | '/admin/operations'
     | '/admin/pickup-points'
+    | '/admin/routes'
     | '/admin/schedules'
     | '/admin/vehicles'
     | '/auth/login'
@@ -325,9 +355,12 @@ export interface FileRouteTypes {
     | '/account'
     | '/bookings'
     | '/ride'
+    | '/admin/analytics'
     | '/admin/bookings'
+    | '/admin/drivers'
     | '/admin/operations'
     | '/admin/pickup-points'
+    | '/admin/routes'
     | '/admin/schedules'
     | '/admin/vehicles'
     | '/auth/login'
@@ -357,9 +390,12 @@ export interface FileRouteTypes {
     | '/bookings'
     | '/driver'
     | '/ride'
+    | '/admin/analytics'
     | '/admin/bookings'
+    | '/admin/drivers'
     | '/admin/operations'
     | '/admin/pickup-points'
+    | '/admin/routes'
     | '/admin/schedules'
     | '/admin/vehicles'
     | '/auth/login'
@@ -573,6 +609,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSchedulesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/routes': {
+      id: '/admin/routes'
+      path: '/routes'
+      fullPath: '/admin/routes'
+      preLoaderRoute: typeof AdminRoutesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/pickup-points': {
       id: '/admin/pickup-points'
       path: '/pickup-points'
@@ -587,11 +630,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOperationsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/drivers': {
+      id: '/admin/drivers'
+      path: '/drivers'
+      fullPath: '/admin/drivers'
+      preLoaderRoute: typeof AdminDriversRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/bookings': {
       id: '/admin/bookings'
       path: '/bookings'
       fullPath: '/admin/bookings'
       preLoaderRoute: typeof AdminBookingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/analytics': {
+      id: '/admin/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/shuttle/pickup/$pointId': {
@@ -619,18 +676,24 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminBookingsRoute: typeof AdminBookingsRoute
+  AdminDriversRoute: typeof AdminDriversRoute
   AdminOperationsRoute: typeof AdminOperationsRoute
   AdminPickupPointsRoute: typeof AdminPickupPointsRoute
+  AdminRoutesRoute: typeof AdminRoutesRoute
   AdminSchedulesRoute: typeof AdminSchedulesRoute
   AdminVehiclesRoute: typeof AdminVehiclesRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminBookingsRoute: AdminBookingsRoute,
+  AdminDriversRoute: AdminDriversRoute,
   AdminOperationsRoute: AdminOperationsRoute,
   AdminPickupPointsRoute: AdminPickupPointsRoute,
+  AdminRoutesRoute: AdminRoutesRoute,
   AdminSchedulesRoute: AdminSchedulesRoute,
   AdminVehiclesRoute: AdminVehiclesRoute,
   AdminIndexRoute: AdminIndexRoute,

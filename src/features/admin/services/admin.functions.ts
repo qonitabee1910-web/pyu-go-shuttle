@@ -78,7 +78,7 @@ export const adminKpis = createServerFn({ method: "GET" })
       supabase
         .from("payments")
         .select("amount")
-        .eq("status", "paid")
+        .eq("status", "success")
         .gte("paid_at", startOfMonth.toISOString()),
       supabase
         .from("schedules")
@@ -109,7 +109,7 @@ export const adminRevenueSeries = createServerFn({ method: "POST" })
     const { data: rows } = await supabase
       .from("payments")
       .select("amount, paid_at, status")
-      .eq("status", "paid")
+      .eq("status", "success")
       .gte("paid_at", start.toISOString());
 
     const buckets = new Map<string, number>();
