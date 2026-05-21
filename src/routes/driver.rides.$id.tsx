@@ -36,17 +36,8 @@ function RideDetail() {
 
   if (!data) return <div className="text-sm text-muted-foreground">Memuat…</div>;
   const o = data.order;
-
-  const act = async (status: "accepted" | "ongoing" | "completed" | "cancelled") => {
-    try {
-      await update({ data: { id, status } });
-      toast.success("Status diperbarui");
-      qc.invalidateQueries({ queryKey: ["ride", id] });
-      if (status === "completed" || status === "cancelled") nav({ to: "/driver/rides" });
-    } catch (e: any) {
-      toast.error(e.message ?? "Gagal");
-    }
-  };
+  const pickup = (o.pickup ?? {}) as { address?: string; lat?: number; lng?: number };
+  const dropoff = (o.dropoff ?? {}) as { address?: string; lat?: number; lng?: number };
 
   return (
     <div className="space-y-4">
@@ -55,8 +46,8 @@ function RideDetail() {
           <CardTitle className="text-base">Order #{o.id.slice(0, 8)}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
-          <div><strong>Pickup:</strong> {o.pickup?.address ?? `${o.pickup.lat},${o.pickup.lng}`}</div>
-          <div><strong>Dropoff:</strong> {o.dropoff?.address ?? `${o.dropoff.lat},${o.dropoff.lng}`}</div>
+          <div><strong>Pickup:</strong> {pickup.address ?? `${pickup.lat},${pickup.lng}`}</div>
+          <div><strong>Dropoff:</strong> {dropoff.address ?? `${dropoff.lat},${dropoff.lng}`}</div>
           <div><strong>Tarif:</strong> {formatRupiah(o.fare)}</div>
           <div><Badge variant="outline">Status: {o.status}</Badge></div>
 
