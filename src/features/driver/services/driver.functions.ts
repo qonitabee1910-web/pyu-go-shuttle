@@ -16,7 +16,7 @@ export const getMyDriverProfile = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data: driver } = await supabase
       .from("drivers")
-      .select("id, status, rating, vehicle_id, license_no, vehicles(name, plate, type, tier)")
+      .select("id, status, rating, vehicle_id, license_no, vehicles(name, plate, type)")
       .eq("id", userId)
       .maybeSingle();
     const { data: profile } = await supabase
@@ -158,8 +158,9 @@ export const updateRideStatus = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const patch: Record<string, any> = { status: data.status };
-    if (data.status === "accepted") patch.driver_id = userId;
+    const patch = data.status === "accepted"
+      ? { status: data.status, driver_id: userId }
+      : { status: data.status };
     const { error } = await supabase.from("ride_orders").update(patch).eq("id", data.id);
     if (error) throw error;
     return { success: true };

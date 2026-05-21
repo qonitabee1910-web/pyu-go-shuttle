@@ -6,7 +6,7 @@ import { listRequestedRides } from "@/features/driver/services/driver.functions"
 import { formatRupiah } from "@/shared/utils/utils";
 import { ArrowRight } from "lucide-react";
 
-export const Route = createFileRoute("/_driver/rides")({
+export const Route = createFileRoute("/driver/rides")({
   component: RidesList,
 });
 

@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatRupiah } from "@/shared/utils/utils";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_driver/rides/$id")({
+export const Route = createFileRoute("/driver/rides/$id")({
   component: RideDetail,
 });
 

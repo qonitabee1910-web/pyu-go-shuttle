@@ -6,7 +6,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { listMyTripsToday } from "@/features/driver/services/driver.functions";
 import { ArrowRight } from "lucide-react";
 
-export const Route = createFileRoute("/_driver/trips")({
+export const Route = createFileRoute("/driver/trips")({
   component: DriverTrips,
 });
 

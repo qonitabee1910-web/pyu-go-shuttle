@@ -16,7 +16,7 @@ import { QrScanner } from "@/features/driver/components/QrScanner";
 import { ScanLine, CheckCircle2, Play, Square } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_driver/trips/$scheduleId")({
+export const Route = createFileRoute("/driver/trips/$scheduleId")({
   component: ManifestPage,
 });
 

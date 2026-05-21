@@ -18,7 +18,7 @@ import { formatRupiah } from "@/shared/utils/utils";
 import { Calendar, MapPin, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_driver/")({
+export const Route = createFileRoute("/driver/")({
   component: DriverHome,
 });
 
