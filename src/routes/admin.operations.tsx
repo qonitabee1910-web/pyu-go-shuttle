@@ -13,6 +13,17 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/shared/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -302,21 +313,38 @@ function OperationsPage() {
                       <TableCell className="align-top">
                         <DensityBar booked={booked} capacity={capacity} occ={occ} />
                       </TableCell>
-                      <TableCell className="text-right align-top">
+                  <TableCell className="text-right align-top">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
                         <Button
                           size="sm"
                           variant={s.active ? "outline" : "default"}
                           className="h-7 text-xs"
-                          onClick={() => {
-                            toggleScheduleActive(s.id);
-                            toast.success(
-                              `Jadwal ${s.departureTime} ${s.active ? "dinonaktifkan" : "diaktifkan"}`,
-                            );
-                          }}
                         >
                           {s.active ? "Nonaktifkan" : "Aktifkan"}
                         </Button>
-                      </TableCell>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>{s.active ? "Nonaktifkan jadwal?" : "Aktifkan jadwal?"}</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {s.active 
+                              ? "Jadwal ini tidak akan muncul di aplikasi pengguna." 
+                              : "Jadwal ini akan kembali muncul dan dapat dipesan oleh pengguna."}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Batal</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => {
+                            toggleScheduleActive(s.id);
+                            toast.success(`Jadwal ${s.departureTime} ${s.active ? "dinonaktifkan" : "diaktifkan"}`);
+                          }}>
+                            {s.active ? "Ya, Nonaktifkan" : "Ya, Aktifkan"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </TableCell>
                     </TableRow>
                   );
                 })}

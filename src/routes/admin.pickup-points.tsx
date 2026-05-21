@@ -6,7 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/shared/components/ui/dialog";
 import { Label } from "@/shared/components/ui/label";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/shared/components/ui/alert-dialog";
@@ -122,7 +122,12 @@ function PickupDialog({ open, onOpenChange, value, onSave }: { open: boolean; on
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>{value.name ? "Edit Pickup Point" : "Tambah Pickup Point"}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{value.name ? "Edit Pickup Point" : "Tambah Pickup Point"}</DialogTitle>
+          <DialogDescription>
+            {value.name ? `Perbarui informasi untuk ${value.name}.` : "Isi formulir di bawah untuk menambahkan titik penjemputan baru."}
+          </DialogDescription>
+        </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Nama"><Input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} /></Field>
           <Field label="Rayon"><Input value={v.rayon} onChange={(e) => setV({ ...v, rayon: e.target.value })} /></Field>

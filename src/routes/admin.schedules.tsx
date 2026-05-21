@@ -8,7 +8,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/shared/components/ui/dialog";
 import { Label } from "@/shared/components/ui/label";
 import { Switch } from "@/shared/components/ui/switch";
 import { Plus, Pencil, Trash2 } from "lucide-react";
@@ -167,7 +167,10 @@ function ScheduleDialog({ open, onOpenChange, value, onSave }: { open: boolean; 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>Jadwal</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Jadwal</DialogTitle>
+          <DialogDescription>Atur rute, waktu, dan kapasitas armada untuk jadwal ini.</DialogDescription>
+        </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <Label className="mb-1 block text-xs">Pickup Point</Label>
