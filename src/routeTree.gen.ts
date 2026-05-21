@@ -10,10 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RideRouteImport } from './routes/ride'
+import { Route as DriverRouteImport } from './routes/driver'
 import { Route as BookingsRouteImport } from './routes/bookings'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DriverIndexRouteImport } from './routes/driver.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as ShuttleTrackingRouteImport } from './routes/shuttle.tracking'
 import { Route as ShuttleTicketRouteImport } from './routes/shuttle.ticket'
@@ -24,19 +26,31 @@ import { Route as ShuttlePickupRouteImport } from './routes/shuttle.pickup'
 import { Route as ShuttlePaymentRouteImport } from './routes/shuttle.payment'
 import { Route as ShuttlePassengerRouteImport } from './routes/shuttle.passenger'
 import { Route as RideTrackingRouteImport } from './routes/ride.tracking'
+import { Route as DriverTripsRouteImport } from './routes/driver.trips'
+import { Route as DriverRidesRouteImport } from './routes/driver.rides'
 import { Route as AuthRegisterRouteImport } from './routes/auth.register'
 import { Route as AuthOtpRouteImport } from './routes/auth.otp'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AdminVehiclesRouteImport } from './routes/admin.vehicles'
 import { Route as AdminSchedulesRouteImport } from './routes/admin.schedules'
+import { Route as AdminRoutesRouteImport } from './routes/admin.routes'
 import { Route as AdminPickupPointsRouteImport } from './routes/admin.pickup-points'
 import { Route as AdminOperationsRouteImport } from './routes/admin.operations'
+import { Route as AdminDriversRouteImport } from './routes/admin.drivers'
 import { Route as AdminBookingsRouteImport } from './routes/admin.bookings'
+import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as ShuttlePickupPointIdRouteImport } from './routes/shuttle.pickup.$pointId'
+import { Route as DriverTripsScheduleIdRouteImport } from './routes/driver.trips.$scheduleId'
+import { Route as DriverRidesIdRouteImport } from './routes/driver.rides.$id'
 
 const RideRoute = RideRouteImport.update({
   id: '/ride',
   path: '/ride',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DriverRoute = DriverRouteImport.update({
+  id: '/driver',
+  path: '/driver',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BookingsRoute = BookingsRouteImport.update({
@@ -58,6 +72,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DriverIndexRoute = DriverIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DriverRoute,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
@@ -109,6 +128,16 @@ const RideTrackingRoute = RideTrackingRouteImport.update({
   path: '/tracking',
   getParentRoute: () => RideRoute,
 } as any)
+const DriverTripsRoute = DriverTripsRouteImport.update({
+  id: '/trips',
+  path: '/trips',
+  getParentRoute: () => DriverRoute,
+} as any)
+const DriverRidesRoute = DriverRidesRouteImport.update({
+  id: '/rides',
+  path: '/rides',
+  getParentRoute: () => DriverRoute,
+} as any)
 const AuthRegisterRoute = AuthRegisterRouteImport.update({
   id: '/auth/register',
   path: '/auth/register',
@@ -134,6 +163,11 @@ const AdminSchedulesRoute = AdminSchedulesRouteImport.update({
   path: '/schedules',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminRoutesRoute = AdminRoutesRouteImport.update({
+  id: '/routes',
+  path: '/routes',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPickupPointsRoute = AdminPickupPointsRouteImport.update({
   id: '/pickup-points',
   path: '/pickup-points',
@@ -144,9 +178,19 @@ const AdminOperationsRoute = AdminOperationsRouteImport.update({
   path: '/operations',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDriversRoute = AdminDriversRouteImport.update({
+  id: '/drivers',
+  path: '/drivers',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminBookingsRoute = AdminBookingsRouteImport.update({
   id: '/bookings',
   path: '/bookings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => AdminRoute,
 } as any)
 const ShuttlePickupPointIdRoute = ShuttlePickupPointIdRouteImport.update({
@@ -154,21 +198,37 @@ const ShuttlePickupPointIdRoute = ShuttlePickupPointIdRouteImport.update({
   path: '/$pointId',
   getParentRoute: () => ShuttlePickupRoute,
 } as any)
+const DriverTripsScheduleIdRoute = DriverTripsScheduleIdRouteImport.update({
+  id: '/$scheduleId',
+  path: '/$scheduleId',
+  getParentRoute: () => DriverTripsRoute,
+} as any)
+const DriverRidesIdRoute = DriverRidesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => DriverRidesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
   '/bookings': typeof BookingsRoute
+  '/driver': typeof DriverRouteWithChildren
   '/ride': typeof RideRouteWithChildren
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/bookings': typeof AdminBookingsRoute
+  '/admin/drivers': typeof AdminDriversRoute
   '/admin/operations': typeof AdminOperationsRoute
   '/admin/pickup-points': typeof AdminPickupPointsRoute
+  '/admin/routes': typeof AdminRoutesRoute
   '/admin/schedules': typeof AdminSchedulesRoute
   '/admin/vehicles': typeof AdminVehiclesRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/otp': typeof AuthOtpRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/driver/rides': typeof DriverRidesRouteWithChildren
+  '/driver/trips': typeof DriverTripsRouteWithChildren
   '/ride/tracking': typeof RideTrackingRoute
   '/shuttle/passenger': typeof ShuttlePassengerRoute
   '/shuttle/payment': typeof ShuttlePaymentRoute
@@ -179,6 +239,9 @@ export interface FileRoutesByFullPath {
   '/shuttle/ticket': typeof ShuttleTicketRoute
   '/shuttle/tracking': typeof ShuttleTrackingRoute
   '/admin/': typeof AdminIndexRoute
+  '/driver/': typeof DriverIndexRoute
+  '/driver/rides/$id': typeof DriverRidesIdRoute
+  '/driver/trips/$scheduleId': typeof DriverTripsScheduleIdRoute
   '/shuttle/pickup/$pointId': typeof ShuttlePickupPointIdRoute
 }
 export interface FileRoutesByTo {
@@ -186,14 +249,19 @@ export interface FileRoutesByTo {
   '/account': typeof AccountRoute
   '/bookings': typeof BookingsRoute
   '/ride': typeof RideRouteWithChildren
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/bookings': typeof AdminBookingsRoute
+  '/admin/drivers': typeof AdminDriversRoute
   '/admin/operations': typeof AdminOperationsRoute
   '/admin/pickup-points': typeof AdminPickupPointsRoute
+  '/admin/routes': typeof AdminRoutesRoute
   '/admin/schedules': typeof AdminSchedulesRoute
   '/admin/vehicles': typeof AdminVehiclesRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/otp': typeof AuthOtpRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/driver/rides': typeof DriverRidesRouteWithChildren
+  '/driver/trips': typeof DriverTripsRouteWithChildren
   '/ride/tracking': typeof RideTrackingRoute
   '/shuttle/passenger': typeof ShuttlePassengerRoute
   '/shuttle/payment': typeof ShuttlePaymentRoute
@@ -204,6 +272,9 @@ export interface FileRoutesByTo {
   '/shuttle/ticket': typeof ShuttleTicketRoute
   '/shuttle/tracking': typeof ShuttleTrackingRoute
   '/admin': typeof AdminIndexRoute
+  '/driver': typeof DriverIndexRoute
+  '/driver/rides/$id': typeof DriverRidesIdRoute
+  '/driver/trips/$scheduleId': typeof DriverTripsScheduleIdRoute
   '/shuttle/pickup/$pointId': typeof ShuttlePickupPointIdRoute
 }
 export interface FileRoutesById {
@@ -212,15 +283,21 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
   '/bookings': typeof BookingsRoute
+  '/driver': typeof DriverRouteWithChildren
   '/ride': typeof RideRouteWithChildren
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/bookings': typeof AdminBookingsRoute
+  '/admin/drivers': typeof AdminDriversRoute
   '/admin/operations': typeof AdminOperationsRoute
   '/admin/pickup-points': typeof AdminPickupPointsRoute
+  '/admin/routes': typeof AdminRoutesRoute
   '/admin/schedules': typeof AdminSchedulesRoute
   '/admin/vehicles': typeof AdminVehiclesRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/otp': typeof AuthOtpRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/driver/rides': typeof DriverRidesRouteWithChildren
+  '/driver/trips': typeof DriverTripsRouteWithChildren
   '/ride/tracking': typeof RideTrackingRoute
   '/shuttle/passenger': typeof ShuttlePassengerRoute
   '/shuttle/payment': typeof ShuttlePaymentRoute
@@ -231,6 +308,9 @@ export interface FileRoutesById {
   '/shuttle/ticket': typeof ShuttleTicketRoute
   '/shuttle/tracking': typeof ShuttleTrackingRoute
   '/admin/': typeof AdminIndexRoute
+  '/driver/': typeof DriverIndexRoute
+  '/driver/rides/$id': typeof DriverRidesIdRoute
+  '/driver/trips/$scheduleId': typeof DriverTripsScheduleIdRoute
   '/shuttle/pickup/$pointId': typeof ShuttlePickupPointIdRoute
 }
 export interface FileRouteTypes {
@@ -240,15 +320,21 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/bookings'
+    | '/driver'
     | '/ride'
+    | '/admin/analytics'
     | '/admin/bookings'
+    | '/admin/drivers'
     | '/admin/operations'
     | '/admin/pickup-points'
+    | '/admin/routes'
     | '/admin/schedules'
     | '/admin/vehicles'
     | '/auth/login'
     | '/auth/otp'
     | '/auth/register'
+    | '/driver/rides'
+    | '/driver/trips'
     | '/ride/tracking'
     | '/shuttle/passenger'
     | '/shuttle/payment'
@@ -259,6 +345,9 @@ export interface FileRouteTypes {
     | '/shuttle/ticket'
     | '/shuttle/tracking'
     | '/admin/'
+    | '/driver/'
+    | '/driver/rides/$id'
+    | '/driver/trips/$scheduleId'
     | '/shuttle/pickup/$pointId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -266,14 +355,19 @@ export interface FileRouteTypes {
     | '/account'
     | '/bookings'
     | '/ride'
+    | '/admin/analytics'
     | '/admin/bookings'
+    | '/admin/drivers'
     | '/admin/operations'
     | '/admin/pickup-points'
+    | '/admin/routes'
     | '/admin/schedules'
     | '/admin/vehicles'
     | '/auth/login'
     | '/auth/otp'
     | '/auth/register'
+    | '/driver/rides'
+    | '/driver/trips'
     | '/ride/tracking'
     | '/shuttle/passenger'
     | '/shuttle/payment'
@@ -284,6 +378,9 @@ export interface FileRouteTypes {
     | '/shuttle/ticket'
     | '/shuttle/tracking'
     | '/admin'
+    | '/driver'
+    | '/driver/rides/$id'
+    | '/driver/trips/$scheduleId'
     | '/shuttle/pickup/$pointId'
   id:
     | '__root__'
@@ -291,15 +388,21 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/bookings'
+    | '/driver'
     | '/ride'
+    | '/admin/analytics'
     | '/admin/bookings'
+    | '/admin/drivers'
     | '/admin/operations'
     | '/admin/pickup-points'
+    | '/admin/routes'
     | '/admin/schedules'
     | '/admin/vehicles'
     | '/auth/login'
     | '/auth/otp'
     | '/auth/register'
+    | '/driver/rides'
+    | '/driver/trips'
     | '/ride/tracking'
     | '/shuttle/passenger'
     | '/shuttle/payment'
@@ -310,6 +413,9 @@ export interface FileRouteTypes {
     | '/shuttle/ticket'
     | '/shuttle/tracking'
     | '/admin/'
+    | '/driver/'
+    | '/driver/rides/$id'
+    | '/driver/trips/$scheduleId'
     | '/shuttle/pickup/$pointId'
   fileRoutesById: FileRoutesById
 }
@@ -318,6 +424,7 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   AdminRoute: typeof AdminRouteWithChildren
   BookingsRoute: typeof BookingsRoute
+  DriverRoute: typeof DriverRouteWithChildren
   RideRoute: typeof RideRouteWithChildren
   AuthLoginRoute: typeof AuthLoginRoute
   AuthOtpRoute: typeof AuthOtpRoute
@@ -339,6 +446,13 @@ declare module '@tanstack/react-router' {
       path: '/ride'
       fullPath: '/ride'
       preLoaderRoute: typeof RideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/driver': {
+      id: '/driver'
+      path: '/driver'
+      fullPath: '/driver'
+      preLoaderRoute: typeof DriverRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bookings': {
@@ -368,6 +482,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/driver/': {
+      id: '/driver/'
+      path: '/'
+      fullPath: '/driver/'
+      preLoaderRoute: typeof DriverIndexRouteImport
+      parentRoute: typeof DriverRoute
     }
     '/admin/': {
       id: '/admin/'
@@ -439,6 +560,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RideTrackingRouteImport
       parentRoute: typeof RideRoute
     }
+    '/driver/trips': {
+      id: '/driver/trips'
+      path: '/trips'
+      fullPath: '/driver/trips'
+      preLoaderRoute: typeof DriverTripsRouteImport
+      parentRoute: typeof DriverRoute
+    }
+    '/driver/rides': {
+      id: '/driver/rides'
+      path: '/rides'
+      fullPath: '/driver/rides'
+      preLoaderRoute: typeof DriverRidesRouteImport
+      parentRoute: typeof DriverRoute
+    }
     '/auth/register': {
       id: '/auth/register'
       path: '/auth/register'
@@ -474,6 +609,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSchedulesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/routes': {
+      id: '/admin/routes'
+      path: '/routes'
+      fullPath: '/admin/routes'
+      preLoaderRoute: typeof AdminRoutesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/pickup-points': {
       id: '/admin/pickup-points'
       path: '/pickup-points'
@@ -488,11 +630,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOperationsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/drivers': {
+      id: '/admin/drivers'
+      path: '/drivers'
+      fullPath: '/admin/drivers'
+      preLoaderRoute: typeof AdminDriversRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/bookings': {
       id: '/admin/bookings'
       path: '/bookings'
       fullPath: '/admin/bookings'
       preLoaderRoute: typeof AdminBookingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/analytics': {
+      id: '/admin/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/shuttle/pickup/$pointId': {
@@ -502,28 +658,87 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShuttlePickupPointIdRouteImport
       parentRoute: typeof ShuttlePickupRoute
     }
+    '/driver/trips/$scheduleId': {
+      id: '/driver/trips/$scheduleId'
+      path: '/$scheduleId'
+      fullPath: '/driver/trips/$scheduleId'
+      preLoaderRoute: typeof DriverTripsScheduleIdRouteImport
+      parentRoute: typeof DriverTripsRoute
+    }
+    '/driver/rides/$id': {
+      id: '/driver/rides/$id'
+      path: '/$id'
+      fullPath: '/driver/rides/$id'
+      preLoaderRoute: typeof DriverRidesIdRouteImport
+      parentRoute: typeof DriverRidesRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminBookingsRoute: typeof AdminBookingsRoute
+  AdminDriversRoute: typeof AdminDriversRoute
   AdminOperationsRoute: typeof AdminOperationsRoute
   AdminPickupPointsRoute: typeof AdminPickupPointsRoute
+  AdminRoutesRoute: typeof AdminRoutesRoute
   AdminSchedulesRoute: typeof AdminSchedulesRoute
   AdminVehiclesRoute: typeof AdminVehiclesRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminBookingsRoute: AdminBookingsRoute,
+  AdminDriversRoute: AdminDriversRoute,
   AdminOperationsRoute: AdminOperationsRoute,
   AdminPickupPointsRoute: AdminPickupPointsRoute,
+  AdminRoutesRoute: AdminRoutesRoute,
   AdminSchedulesRoute: AdminSchedulesRoute,
   AdminVehiclesRoute: AdminVehiclesRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+interface DriverRidesRouteChildren {
+  DriverRidesIdRoute: typeof DriverRidesIdRoute
+}
+
+const DriverRidesRouteChildren: DriverRidesRouteChildren = {
+  DriverRidesIdRoute: DriverRidesIdRoute,
+}
+
+const DriverRidesRouteWithChildren = DriverRidesRoute._addFileChildren(
+  DriverRidesRouteChildren,
+)
+
+interface DriverTripsRouteChildren {
+  DriverTripsScheduleIdRoute: typeof DriverTripsScheduleIdRoute
+}
+
+const DriverTripsRouteChildren: DriverTripsRouteChildren = {
+  DriverTripsScheduleIdRoute: DriverTripsScheduleIdRoute,
+}
+
+const DriverTripsRouteWithChildren = DriverTripsRoute._addFileChildren(
+  DriverTripsRouteChildren,
+)
+
+interface DriverRouteChildren {
+  DriverRidesRoute: typeof DriverRidesRouteWithChildren
+  DriverTripsRoute: typeof DriverTripsRouteWithChildren
+  DriverIndexRoute: typeof DriverIndexRoute
+}
+
+const DriverRouteChildren: DriverRouteChildren = {
+  DriverRidesRoute: DriverRidesRouteWithChildren,
+  DriverTripsRoute: DriverTripsRouteWithChildren,
+  DriverIndexRoute: DriverIndexRoute,
+}
+
+const DriverRouteWithChildren =
+  DriverRoute._addFileChildren(DriverRouteChildren)
 
 interface RideRouteChildren {
   RideTrackingRoute: typeof RideTrackingRoute
@@ -552,6 +767,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   AdminRoute: AdminRouteWithChildren,
   BookingsRoute: BookingsRoute,
+  DriverRoute: DriverRouteWithChildren,
   RideRoute: RideRouteWithChildren,
   AuthLoginRoute: AuthLoginRoute,
   AuthOtpRoute: AuthOtpRoute,

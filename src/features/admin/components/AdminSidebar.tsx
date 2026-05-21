@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, MapPin, Calendar, Bus, Ticket, ArrowLeft, Activity } from "lucide-react";
+import { LayoutDashboard, MapPin, Calendar, Bus, Ticket, ArrowLeft, Activity, Users, Route as RouteIcon, BarChart3 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,10 +16,13 @@ import {
 const items = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Operations", url: "/admin/operations", icon: Activity },
-  { title: "Pickup Points", url: "/admin/pickup-points", icon: MapPin },
-  { title: "Schedules", url: "/admin/schedules", icon: Calendar },
-  { title: "Vehicles", url: "/admin/vehicles", icon: Bus },
+  { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
   { title: "Bookings", url: "/admin/bookings", icon: Ticket },
+  { title: "Schedules", url: "/admin/schedules", icon: Calendar },
+  { title: "Routes", url: "/admin/routes", icon: RouteIcon },
+  { title: "Pickup Points", url: "/admin/pickup-points", icon: MapPin },
+  { title: "Vehicles", url: "/admin/vehicles", icon: Bus },
+  { title: "Drivers", url: "/admin/drivers", icon: Users },
 ];
 
 export function AdminSidebar() {
