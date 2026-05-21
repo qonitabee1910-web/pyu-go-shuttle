@@ -39,6 +39,17 @@ function RideDetail() {
   const pickup = (o.pickup ?? {}) as { address?: string; lat?: number; lng?: number };
   const dropoff = (o.dropoff ?? {}) as { address?: string; lat?: number; lng?: number };
 
+  const act = async (status: "accepted" | "ongoing" | "completed" | "cancelled") => {
+    try {
+      await update({ data: { id, status } });
+      toast.success("Status diperbarui");
+      qc.invalidateQueries({ queryKey: ["ride", id] });
+      if (status === "completed" || status === "cancelled") nav({ to: "/driver/rides" });
+    } catch (e: any) {
+      toast.error(e.message ?? "Gagal");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card>
