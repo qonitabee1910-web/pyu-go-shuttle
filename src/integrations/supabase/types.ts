@@ -19,6 +19,7 @@ export type Database = {
           code: string
           created_at: string
           id: string
+          note: string | null
           passenger_name: string | null
           passenger_phone: string | null
           promo_code: string | null
@@ -31,6 +32,7 @@ export type Database = {
           code: string
           created_at?: string
           id?: string
+          note?: string | null
           passenger_name?: string | null
           passenger_phone?: string | null
           promo_code?: string | null
@@ -43,6 +45,7 @@ export type Database = {
           code?: string
           created_at?: string
           id?: string
+          note?: string | null
           passenger_name?: string | null
           passenger_phone?: string | null
           promo_code?: string | null
@@ -170,6 +173,7 @@ export type Database = {
           distance_km: number | null
           eta_min: number | null
           id: string
+          image_url: string | null
           lat: number
           lng: number
           name: string
@@ -184,6 +188,7 @@ export type Database = {
           distance_km?: number | null
           eta_min?: number | null
           id?: string
+          image_url?: string | null
           lat: number
           lng: number
           name: string
@@ -198,6 +203,7 @@ export type Database = {
           distance_km?: number | null
           eta_min?: number | null
           id?: string
+          image_url?: string | null
           lat?: number
           lng?: number
           name?: string
@@ -540,9 +546,12 @@ export type Database = {
           capacity: number
           created_at: string
           id: string
+          image_url: string | null
           name: string
           plate: string
           seat_layout: Json
+          status: string
+          tier: Database["public"]["Enums"]["vehicle_tier"]
           type: Database["public"]["Enums"]["vehicle_type"]
         }
         Insert: {
@@ -550,9 +559,12 @@ export type Database = {
           capacity: number
           created_at?: string
           id?: string
+          image_url?: string | null
           name: string
           plate: string
           seat_layout?: Json
+          status?: string
+          tier?: Database["public"]["Enums"]["vehicle_tier"]
           type: Database["public"]["Enums"]["vehicle_type"]
         }
         Update: {
@@ -560,9 +572,12 @@ export type Database = {
           capacity?: number
           created_at?: string
           id?: string
+          image_url?: string | null
           name?: string
           plate?: string
           seat_layout?: Json
+          status?: string
+          tier?: Database["public"]["Enums"]["vehicle_tier"]
           type?: Database["public"]["Enums"]["vehicle_type"]
         }
         Relationships: []
