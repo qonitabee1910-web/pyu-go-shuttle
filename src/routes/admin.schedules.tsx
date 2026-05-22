@@ -139,8 +139,10 @@ function SchedulesPage() {
 
   const seatsTotal = (vehicleId: string) => {
     const v = vehicles.find((x: any) => x.id === vehicleId);
-    return (v?.seat_layout || []).filter((m: any) => m.kind === "seat").length;
+    const layout = Array.isArray(v?.seat_layout) ? (v!.seat_layout as any[]) : [];
+    return layout.filter((m: any) => m?.kind === "seat").length || (v?.capacity ?? 0);
   };
+
 
   if (loadingSchedules || loadingVehicles || loadingPickups || loadingBookings) {
     return (
