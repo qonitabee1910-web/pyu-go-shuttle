@@ -181,31 +181,56 @@ export const adminSetVehiclePlate = createServerFn({ method: "POST" })
 
 export const adminUpsertSchedule = createServerFn({ method: "POST" })
   .middleware([requireAdminAuth])
-  .inputValidator((d: any) => 
+  .inputValidator((d: any) =>
     z.object({
       id: z.string().uuid().optional(),
       pickup_point_id: z.string().uuid(),
       vehicle_id: z.string().uuid(),
+      route_id: z.string().uuid().optional(),
       departure_at: z.string(),
       arrival_at: z.string().optional(),
       price: z.number().nonnegative(),
+      seats_total: z.number().int().positive().optional(),
+      tier: z.enum(["Reguler", "SemiExecutive", "Executive"]).optional(),
       active: z.boolean().optional(),
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { error } = await supabase.from("schedules").upsert({
-      id: data.id || undefined,
+    // Resolve defaults from related rows when not provided.
+    let routeId = data.route_id ?? null;
+    let seatsTotal = data.seats_total ?? null;
+    let tier = data.tier ?? null;
+    if (!routeId) {
+      const { data: r } = await supabase.from("routes").select("id").eq("active", true).limit(1).maybeSingle();
+      if (r) routeId = r.id;
+    }
+    if (!seatsTotal || !tier) {
+      const { data: v } = await supabase
+        .from("vehicles").select("capacity, tier").eq("id", data.vehicle_id).maybeSingle();
+      if (v) {
+        seatsTotal = seatsTotal ?? v.capacity;
+        tier = tier ?? (v.tier as any);
+      }
+    }
+    if (!routeId) throw new Error("Tidak ada rute aktif. Tambahkan rute terlebih dulu.");
+    const row: any = {
       pickup_point_id: data.pickup_point_id,
       vehicle_id: data.vehicle_id,
+      route_id: routeId,
       departure_at: data.departure_at,
-      arrival_at: data.arrival_at || null,
+      arrival_at: data.arrival_at ?? null,
       price: data.price,
+      seats_total: seatsTotal ?? 6,
+      tier: tier ?? "Reguler",
       active: data.active ?? true,
-    });
+    };
+    if (data.id) row.id = data.id;
+    const { error } = await supabase.from("schedules").upsert(row);
     if (error) throw error;
     return { success: true };
   });
+
 
 export const adminDeleteSchedule = createServerFn({ method: "POST" })
   .middleware([requireAdminAuth])
