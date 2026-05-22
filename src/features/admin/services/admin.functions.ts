@@ -110,7 +110,7 @@ export const adminDeletePickupPoint = createServerFn({ method: "POST" })
 
 export const adminUpsertVehicle = createServerFn({ method: "POST" })
   .middleware([requireAdminAuth])
-  .inputValidator((d: any) => 
+  .inputValidator((d: any) =>
     z.object({
       id: z.string().uuid().optional(),
       name: z.string().min(1),
@@ -118,25 +118,30 @@ export const adminUpsertVehicle = createServerFn({ method: "POST" })
       type: z.enum(["minicar", "suv", "hiace"]),
       tier: z.enum(["Reguler", "SemiExecutive", "Executive"]),
       status: z.enum(["active", "maintenance", "offline"]).optional(),
+      capacity: z.number().int().positive().optional(),
       image_url: z.string().optional(),
       seat_layout: z.any().optional(),
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { error } = await supabase.from("vehicles").upsert({
-      id: data.id || undefined,
+    const defaultCapacity = data.type === "hiace" ? 12 : data.type === "suv" ? 7 : 6;
+    const row: any = {
       name: data.name,
       plate: data.plate,
       type: data.type,
       tier: data.tier,
       status: data.status ?? "active",
-      image_url: data.image_url || null,
-      seat_layout: data.seat_layout || null,
-    });
+      capacity: data.capacity ?? defaultCapacity,
+      image_url: data.image_url ?? null,
+      seat_layout: data.seat_layout ?? {},
+    };
+    if (data.id) row.id = data.id;
+    const { error } = await supabase.from("vehicles").upsert(row);
     if (error) throw error;
     return { success: true };
   });
+
 
 export const adminDeleteVehicle = createServerFn({ method: "POST" })
   .middleware([requireAdminAuth])
