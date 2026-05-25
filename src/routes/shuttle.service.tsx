@@ -50,15 +50,20 @@ const TIER_INFO: Record<
   },
 };
 
+const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
 function ServicePage() {
   const { pickup, setTier } = useBooking();
   const nav = useNavigate();
   if (!pickup) return <Navigate to="/shuttle/pickup" />;
+  // Guard: legacy/mock pickup ids may not be valid UUIDs — bounce back to picker.
+  if (!UUID_RE.test(pickup.id)) return <Navigate to="/shuttle/pickup" />;
 
   const fetchSummary = useServerFn(getTierSummary);
   const { data: summary, isLoading } = useQuery({
     queryKey: ["tier-summary", pickup.id],
     queryFn: () => fetchSummary({ data: { pickupId: pickup.id } }),
+    enabled: UUID_RE.test(pickup.id),
   });
 
   const tiers: VehicleTier[] = ["Reguler", "SemiExecutive", "Executive"];
